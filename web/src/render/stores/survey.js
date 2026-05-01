@@ -22,41 +22,64 @@ const CODE_MAP = {
 }
 
 export const useSurveyStore = defineStore('survey', () => {
+  // 问卷路径id
   const surveyPath = ref('')
+  // 是否是手机
   const isMobile = ref(isInMobile())
+  // 进入时间
   const enterTime = ref(0)
+  // 加密信息
   const encryptInfo = ref(null)
+  // 规则
   const rules = ref({})
+  // 横幅通告
   const bannerConf = ref({})
+  // 基础配置
   const baseConf = ref({})
+  // 底部配置
   const bottomConf = ref({})
+  // 数据配置
   const dataConf = ref({})
+  // 皮肤配置
   const skinConf = ref({})
+  // 提交确认配置
   const submitConf = ref({})
+  // 表单数据
   const formValues = ref({})
+  // 白名单数据
   const whiteData = ref({})
+  // 页面配置
   const pageConf = ref([])
 
+  // 路由
   const router = useRouter()
+  // 使用问题库
   const questionStore = useQuestionStore()
+
+  // 设置错误信息函数
   const { setErrorInfo } = useErrorInfo()
 
+  // 设置白名单数据方法
   const setWhiteData = (data) => {
     whiteData.value = data
   }
 
+  // 设置问卷路径id方法
   const setSurveyPath = (data) => {
     surveyPath.value = data
   }
 
+  // 设置进入时间方法
   const setEnterTime = () => {
     enterTime.value = Date.now()
   }
 
+  // 设置表单数据
   const setFormValues = (data) => {
     formValues.value = data
   }
 
+  // 获取加密信息
   const getEncryptInfo = async () => {
     try {
       const res = await getEncryptInfoApi()
@@ -68,6 +91,7 @@ export const useSurveyStore = defineStore('survey', () => {
     }
   }
 
+  // 是否可以填写问卷
   const canFillQuestionnaire = (baseConf, submitConf) => {
     const { beginTime, endTime, answerBegTime, answerEndTime } = baseConf
     const { msgContent } = submitConf
@@ -148,6 +172,7 @@ export const useSurveyStore = defineStore('survey', () => {
 
   }
 
+  // 初始化问卷
   const initSurvey = (option) => {
     setEnterTime()
     if (!canFillQuestionnaire(option.baseConf, option.submitConf)) {
@@ -169,6 +194,8 @@ export const useSurveyStore = defineStore('survey', () => {
   const initShowLogicEngine = (showLogicConf) => {
     showLogicEngine.value = new RuleMatch().fromJson(showLogicConf || [])
   }
+
+  // 初始化跳转逻辑引擎
   const jumpLogicEngine = ref()
   const initJumpLogicEngine = (jumpLogicConf) => {
     jumpLogicEngine.value = new RuleMatch().fromJson(jumpLogicConf || [])

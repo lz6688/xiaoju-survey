@@ -1,7 +1,9 @@
+// 移动端设备检测函数,用于判断用户当前是否正在使用手机等移动设备访问页面
 export function isMobile() {
   const userAgentInfo = navigator.userAgent
   const Agents = ['Android', 'iPhone', 'SymbianOS', 'Windows Phone', 'iPad', 'iPod']
   let flag = false
+  // User Agent 检测
   for (let v = 0; v < Agents.length; v++) {
     if (userAgentInfo.indexOf(Agents[v]) > 0) {
       flag = true
@@ -10,6 +12,7 @@ export function isMobile() {
   }
   const w = document.body && document.body.clientWidth
 
+  // 屏幕宽度检测
   if (w > 960) {
     return false
   } else if (w < 480) {

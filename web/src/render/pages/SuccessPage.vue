@@ -4,6 +4,7 @@
       <div class="result-content">
         <img src="/imgs/icons/success.webp" />
         <div class="msg" v-html="successMsg"></div>
+        <!-- 跳转目标 -->
         <router-link
           :to="{
             name: 'renderPage',

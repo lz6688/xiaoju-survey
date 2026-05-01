@@ -2,8 +2,8 @@
   <div
     class="login-page"
     :style="{
-      background: `url('/imgs/create/background.webp') no-repeat bottom right`,
-      'background-size': 'cover'
+      // background: `url('/imgs/create/background.webp') no-repeat bottom right`,
+      // 'background-size': 'cover'
     }"
   >
     <div class="login-top">

@@ -112,6 +112,7 @@ const useOptionCountMap = (questionData) => {
 }
 
 export const useQuestionStore = defineStore('question', () => {
+  // 问题数据
   const questionData = ref(null)
   const questionSeq = ref([]) // 题目的顺序，因为可能会有分页的情况，所以是一个二维数组[[qid1, qid2], [qid3,qid4]]
   const pageIndex = ref(1) // 当前分页的索引

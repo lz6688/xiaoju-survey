@@ -497,8 +497,8 @@ const onInput = () => {
     
     .panel-background {
       height: 20%;
-      background: url('/imgs/AI/Gradual_Background.webp') no-repeat;
-      background-size: cover;
+      // background: url('/imgs/AI/Gradual_Background.webp') no-repeat;
+      // background-size: cover;
       position: absolute;
       top: 0;
       left: 0;

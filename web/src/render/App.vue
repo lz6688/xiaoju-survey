@@ -7,8 +7,10 @@ import { storeToRefs } from 'pinia'
 
 import { useSurveyStore } from './stores/survey'
 
+// 从 useSurveyStore 中获取皮肤配置 skinConf
 const { skinConf } = storeToRefs(useSurveyStore())
 
+// 使用 watch 监听配置的变化（
 watch(skinConf, (skinConfig) => {
   const root = document.documentElement
   const { themeConf, backgroundConf, contentConf }: any = skinConfig

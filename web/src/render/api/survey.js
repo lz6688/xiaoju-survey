@@ -1,5 +1,6 @@
 import axios from './base'
 
+// 获取已发布的调查信息
 export const getPublishedSurveyInfo = ({ surveyPath }) => {
   return axios.get('/responseSchema/getSchema', {
     params: {
@@ -8,6 +9,7 @@ export const getPublishedSurveyInfo = ({ surveyPath }) => {
   })
 }
 
+// 获取预览方案
 export const getPreviewSchema = ({ surveyPath }) => {
   return axios.get('/survey/getPreviewSchema', {
     params: {
@@ -16,6 +18,7 @@ export const getPreviewSchema = ({ surveyPath }) => {
   })
 }
 
+// 提交表单
 export const submitForm = (data) => {
   return axios.post('/surveyResponse/createResponse', data)
 }

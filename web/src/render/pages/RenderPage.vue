@@ -82,6 +82,7 @@ const validate = (callback: (v: boolean) => void) => {
   mainRef.value.$refs.formGroup[index].validate(callback)
 }
 
+// 请求体
 const normalizationRequestBody = () => {
   const enterTime = surveyStore.enterTime
   const encryptInfo: any = surveyStore.encryptInfo
@@ -124,6 +125,7 @@ const normalizationRequestBody = () => {
   return result
 }
 
+//提交调查
 const submitSurvey = async () => {
   if (surveyPath.value.length > 8) {
     router.push({ name: 'successPage' })

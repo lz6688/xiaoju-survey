@@ -21,7 +21,6 @@ const getHeaderValue = (req: Request | undefined, headerName: string) => {
 
 const normalizeIp = (ip = '') => {
   return ip
-    .split(',')[0]
     .trim()
     .replace(/^::ffff:/, '')
     .replace(/^::1$/, '127.0.0.1');
@@ -100,8 +99,13 @@ export const getClientIp = (req?: Request) => {
   const forwardedFor = getHeaderValue(req, 'x-forwarded-for');
   const realIp = getHeaderValue(req, 'x-real-ip');
   const remoteAddress = req?.socket?.remoteAddress || req?.ip || '';
+  const ipList = [forwardedFor, realIp, remoteAddress]
+    .filter(Boolean)
+    .flatMap((ip) => ip.split(','))
+    .map(normalizeIp)
+    .filter(Boolean);
 
-  return normalizeIp(forwardedFor || realIp || remoteAddress);
+  return ipList.find((ip) => !isLocalIp(ip)) || ipList[0] || '';
 };
 
 export const getClientIpLocation = async (

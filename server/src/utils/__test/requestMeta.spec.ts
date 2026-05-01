@@ -19,6 +19,19 @@ describe('requestMeta', () => {
     expect(getClientIp(req as any)).toBe('203.0.113.7');
   });
 
+  it('should skip local proxy ip from x-forwarded-for', () => {
+    const req = {
+      headers: {
+        'x-forwarded-for': '127.0.0.1, ::ffff:127.0.0.1, 203.0.113.7',
+      },
+      socket: {
+        remoteAddress: '127.0.0.1',
+      },
+    };
+
+    expect(getClientIp(req as any)).toBe('203.0.113.7');
+  });
+
   it('should normalize socket remote address', () => {
     const req = {
       headers: {},

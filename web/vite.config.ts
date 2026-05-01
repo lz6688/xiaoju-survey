@@ -124,7 +124,17 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:3000',
-        changeOrigin: true
+        changeOrigin: true,
+        configure(proxy) {
+          proxy.on('proxyReq', (proxyReq, req) => {
+            const currentForwardedFor = req.headers['x-forwarded-for']
+            const remoteAddress = req.socket.remoteAddress
+            const forwardedFor = [currentForwardedFor, remoteAddress].filter(Boolean).join(', ')
+            if (forwardedFor) {
+              proxyReq.setHeader('X-Forwarded-For', forwardedFor)
+            }
+          })
+        }
       },
       '/exportfile': {
         target: 'http://127.0.0.1:3000',

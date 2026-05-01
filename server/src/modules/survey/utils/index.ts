@@ -73,6 +73,11 @@ export function getListHeadByDataList(dataList) {
     type: QUESTION_TYPE.TEXT,
   });
   listHead.push({
+    field: 'ipIsp',
+    title: 'IP运营商',
+    type: QUESTION_TYPE.TEXT,
+  });
+  listHead.push({
     field: 'createdAt',
     title: '提交时间',
     type: QUESTION_TYPE.TEXT,

@@ -20,6 +20,7 @@ export class SurveyResponseService {
     channelId = undefined,
     ip = '',
     ipLocation = '',
+    ipIsp = '',
   }) {
     const newSubmitData = this.surveyResponseRepository.create({
       surveyPath,
@@ -32,6 +33,7 @@ export class SurveyResponseService {
       channelId,
       ip,
       ipLocation,
+      ipIsp,
     });
 
     // 提交问卷

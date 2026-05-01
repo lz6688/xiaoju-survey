@@ -28,6 +28,11 @@ import { WorkspaceMemberService } from 'src/modules/workspace/services/workspace
 import { AppManagerService } from 'src/modules/appManager/services/appManager.service';
 import { OpenAuthGuard } from 'src/guards/openAuth.guard';
 import { APPList } from 'src/modules/appManager/appConfg';
+import { getRequestMeta } from 'src/utils/requestMeta';
+
+jest.mock('src/utils/requestMeta', () => ({
+  getRequestMeta: jest.fn(),
+}));
 
 const mockDecryptErrorBody = {
   surveyPath: 'EBzdmnSp',
@@ -86,6 +91,12 @@ describe('SurveyResponseController', () => {
   let testingModule: TestingModule;
 
   beforeEach(async () => {
+    (getRequestMeta as jest.Mock).mockResolvedValue({
+      ip: '',
+      ipLocation: '',
+      ipIsp: '',
+    });
+
     testingModule = await Test.createTestingModule({
       controllers: [SurveyResponseController],
       providers: [
@@ -274,6 +285,7 @@ describe('SurveyResponseController', () => {
         channelId: undefined,
         ip: '',
         ipLocation: '',
+        ipIsp: '',
       });
 
       expect(clientEncryptService.deleteEncryptInfo).toHaveBeenCalledWith(
@@ -285,13 +297,17 @@ describe('SurveyResponseController', () => {
       const reqBody = cloneDeep(mockSubmitData);
       const req = {
         headers: {
-          'x-forwarded-for': '203.0.113.7, 10.0.0.1',
-          'x-ip-location': '%E5%8C%97%E4%BA%AC%E5%B8%82',
+          'x-forwarded-for': '113.118.113.77, 10.0.0.1',
         },
         socket: {
           remoteAddress: '10.0.0.2',
         },
       };
+      (getRequestMeta as jest.Mock).mockResolvedValueOnce({
+        ip: '113.118.113.77',
+        ipLocation: '中国广东省深圳市',
+        ipIsp: '电信',
+      });
 
       jest
         .spyOn(responseSchemaService, 'getResponseSchemaByPath')
@@ -314,8 +330,9 @@ describe('SurveyResponseController', () => {
 
       expect(surveyResponseService.createSurveyResponse).toHaveBeenCalledWith(
         expect.objectContaining({
-          ip: '203.0.113.7',
-          ipLocation: '北京市',
+          ip: '113.118.113.77',
+          ipLocation: '中国广东省深圳市',
+          ipIsp: '电信',
         }),
       );
     });

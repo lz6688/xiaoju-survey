@@ -110,6 +110,7 @@ export class DataStatisticService {
           : '0',
         ip: submitedData.ip || '',
         ipLocation: submitedData.ipLocation || '',
+        ipIsp: submitedData.ipIsp || '',
         createdAt: moment(submitedData.createdAt).format('YYYY-MM-DD HH:mm:ss'),
       };
     });

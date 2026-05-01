@@ -34,6 +34,9 @@ export class SurveyResponse extends BaseEntity {
   @Column()
   ipLocation: string;
 
+  @Column()
+  ipIsp: string;
+
   @BeforeInsert()
   async onDataInsert() {
     return await pluginManager.triggerHook('encryptResponseData', this);

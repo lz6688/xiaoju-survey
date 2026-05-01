@@ -72,6 +72,7 @@ describe('DataStatisticService', () => {
           clientTime: 1710340862733.0,
           ip: '203.0.113.7',
           ipLocation: '北京市',
+          ipIsp: '电信',
           secretKeys: [],
           optionTextAndId: {
             data549: [
@@ -201,6 +202,7 @@ describe('DataStatisticService', () => {
             createdAt: expect.any(String),
             ip: '203.0.113.7',
             ipLocation: '北京市',
+            ipIsp: '电信',
           }),
         ]),
       });

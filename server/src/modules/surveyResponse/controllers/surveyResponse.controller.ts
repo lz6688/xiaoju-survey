@@ -174,6 +174,7 @@ export class SurveyResponseController {
       data: formValues,
       ip,
       ipLocation,
+      ipIsp,
     } = params;
 
     // 查询schema
@@ -332,6 +333,7 @@ export class SurveyResponseController {
       channelId: params.channelId,
       ip,
       ipLocation,
+      ipIsp,
     };
     const surveyResponse =
       await this.surveyResponseService.createSurveyResponse(model);

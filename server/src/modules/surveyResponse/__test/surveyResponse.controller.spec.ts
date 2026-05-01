@@ -271,10 +271,52 @@ describe('SurveyResponseController', () => {
             },
           ],
         },
+        channelId: undefined,
+        ip: '',
+        ipLocation: '',
       });
 
       expect(clientEncryptService.deleteEncryptInfo).toHaveBeenCalledWith(
         reqBody.sessionId,
+      );
+    });
+
+    it('should pass client ip and location to create response process', async () => {
+      const reqBody = cloneDeep(mockSubmitData);
+      const req = {
+        headers: {
+          'x-forwarded-for': '203.0.113.7, 10.0.0.1',
+          'x-ip-location': '%E5%8C%97%E4%BA%AC%E5%B8%82',
+        },
+        socket: {
+          remoteAddress: '10.0.0.2',
+        },
+      };
+
+      jest
+        .spyOn(responseSchemaService, 'getResponseSchemaByPath')
+        .mockResolvedValueOnce(mockResponseSchema);
+      jest
+        .spyOn(surveyResponseService, 'getSurveyResponseTotalByPath')
+        .mockResolvedValueOnce(0);
+      jest
+        .spyOn(surveyResponseService, 'createSurveyResponse')
+        .mockResolvedValueOnce({
+          _id: new ObjectId('65fc2dd77f4520858046e129'),
+          data: {},
+          optionTextAndId: {},
+        } as SurveyResponse);
+      jest
+        .spyOn(clientEncryptService, 'deleteEncryptInfo')
+        .mockResolvedValueOnce(undefined);
+
+      await (controller.createResponse as any)(reqBody, req);
+
+      expect(surveyResponseService.createSurveyResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ip: '203.0.113.7',
+          ipLocation: '北京市',
+        }),
       );
     });
 

@@ -70,6 +70,8 @@ describe('DataStatisticService', () => {
           },
           diffTime: 21278,
           clientTime: 1710340862733.0,
+          ip: '203.0.113.7',
+          ipLocation: '北京市',
           secretKeys: [],
           optionTextAndId: {
             data549: [
@@ -197,6 +199,8 @@ describe('DataStatisticService', () => {
             data863: expect.any(String),
             diffTime: expect.any(String),
             createdAt: expect.any(String),
+            ip: '203.0.113.7',
+            ipLocation: '北京市',
           }),
         ]),
       });

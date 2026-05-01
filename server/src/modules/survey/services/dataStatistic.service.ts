@@ -108,6 +108,8 @@ export class DataStatisticService {
         diffTime: submitedData.diffTime
           ? (submitedData.diffTime / 1000).toFixed(2)
           : '0',
+        ip: submitedData.ip || '',
+        ipLocation: submitedData.ipLocation || '',
         createdAt: moment(submitedData.createdAt).format('YYYY-MM-DD HH:mm:ss'),
       };
     });

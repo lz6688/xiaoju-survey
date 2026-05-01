@@ -1,7 +1,16 @@
-import { Controller, Post, Body, HttpCode, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
+import { Request } from 'express';
 import { HttpException } from 'src/exceptions/httpException';
 import { SurveyNotFoundException } from 'src/exceptions/surveyNotFoundException';
 import { checkSign } from 'src/utils/checkSign';
+import { getRequestMeta } from 'src/utils/requestMeta';
 import { ENCRYPT_TYPE } from 'src/enums/encrypt';
 import { EXCEPTION_CODE } from 'src/enums/exceptionCode';
 import { getPushingData } from 'src/utils/messagePushing';
@@ -49,12 +58,13 @@ export class SurveyResponseController {
 
   @Post('/createResponse')
   @HttpCode(200)
-  async createResponse(@Body() reqBody) {
+  async createResponse(@Body() reqBody, @Req() req?: Request) {
     const value = await this.validateParams(reqBody);
     const { encryptType, data, sessionId } = value;
 
     // 检查签名
     checkSign(reqBody);
+    const requestMeta = await getRequestMeta(req);
 
     // 解密数据
     let result = data;
@@ -64,7 +74,11 @@ export class SurveyResponseController {
     }
     formValues = JSON.parse(JSON.stringify(result));
     try {
-      await this.createResponseProcess({ ...value, data: formValues });
+      await this.createResponseProcess({
+        ...value,
+        ...requestMeta,
+        data: formValues,
+      });
       return {
         code: 200,
         msg: '提交成功',
@@ -77,13 +91,14 @@ export class SurveyResponseController {
   @Post('/createResponseWithOpen')
   @UseGuards(OpenAuthGuard)
   @HttpCode(200)
-  async createResponseWithOpen(@Body() reqBody) {
+  async createResponseWithOpen(@Body() reqBody, @Req() req?: Request) {
     if (!reqBody.channelId) {
       throw new HttpException('缺少渠道参数', EXCEPTION_CODE.PARAMETER_ERROR);
     }
     const value = await this.validateParams(reqBody);
     const { data } = value;
     const channelId = reqBody.channelId;
+    const requestMeta = await getRequestMeta(req);
 
     // 解密数据
     let formValues: Record<string, any> = {};
@@ -94,7 +109,7 @@ export class SurveyResponseController {
         : JSON.parse(JSON.stringify(data));
     try {
       await this.createResponseProcess(
-        { ...value, data: formValues, channelId },
+        { ...value, ...requestMeta, data: formValues, channelId },
         false,
       );
       return {
@@ -157,6 +172,8 @@ export class SurveyResponseController {
       password,
       whitelist: whitelistValue,
       data: formValues,
+      ip,
+      ipLocation,
     } = params;
 
     // 查询schema
@@ -313,6 +330,8 @@ export class SurveyResponseController {
       surveyId: responseSchema.pageId,
       optionTextAndId,
       channelId: params.channelId,
+      ip,
+      ipLocation,
     };
     const surveyResponse =
       await this.surveyResponseService.createSurveyResponse(model);

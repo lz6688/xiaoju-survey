@@ -63,6 +63,16 @@ export function getListHeadByDataList(dataList) {
     type: QUESTION_TYPE.TEXT,
   });
   listHead.push({
+    field: 'ip',
+    title: 'IP',
+    type: QUESTION_TYPE.TEXT,
+  });
+  listHead.push({
+    field: 'ipLocation',
+    title: 'IP所在地',
+    type: QUESTION_TYPE.TEXT,
+  });
+  listHead.push({
     field: 'createdAt',
     title: '提交时间',
     type: QUESTION_TYPE.TEXT,

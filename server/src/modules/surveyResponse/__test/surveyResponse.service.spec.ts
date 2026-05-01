@@ -38,6 +38,8 @@ describe('SurveyResponseService', () => {
       surveyId: 'testId',
       surveyPath: 'testPath',
       optionTextAndId: {},
+      ip: '203.0.113.7',
+      ipLocation: '北京市',
     };
     jest
       .spyOn(surveyResponseRepository, 'create')
@@ -64,6 +66,8 @@ describe('SurveyResponseService', () => {
       pageId: surveyData.surveyId,
       secretKeys: [],
       optionTextAndId: surveyData.optionTextAndId,
+      ip: surveyData.ip,
+      ipLocation: surveyData.ipLocation,
     });
   });
 

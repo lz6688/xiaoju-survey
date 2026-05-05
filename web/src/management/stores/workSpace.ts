@@ -46,6 +46,12 @@ export const useWorkSpaceStore = defineStore('workSpace', () => {
       children: []
     },
     {
+      icon: 'icon-bufenquanxian',
+      name: '代理管理',
+      id: MenuType.AgentManage,
+      children: []
+    },
+    {
       icon: 'icon-huishouzhan',
       name: '回收站',
       id: MenuType.RecycleBin,

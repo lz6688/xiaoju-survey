@@ -70,6 +70,7 @@ export type GroupItem = {
 export enum MenuType {
   PersonalGroup = 'personalGroup',
   SpaceGroup = 'spaceGroup',
+  AgentManage = 'agentManage',
   RecycleBin = 'recycleBin'
 }
 

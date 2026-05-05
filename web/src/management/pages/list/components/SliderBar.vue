@@ -27,7 +27,7 @@
         </template>
       </el-menu-item>
 
-      <div v-else> 
+      <div v-else>
         <el-menu-item
           :class="[
             index === 0 ? 'bottom' : '',
@@ -46,6 +46,7 @@
           </template>
         </el-menu-item>
         <el-sub-menu
+          v-else
           :index="menu.id.toString()"
           :class="[activeValue == menu.id ? 'check-item' : '']"
           default-opened

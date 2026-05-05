@@ -193,7 +193,17 @@ const routes: RouteRecordRaw[] = [
       allowRoles: ['admin'],
       title: '代理管理'
     },
-    component: () => import('../pages/agent/AgentPage.vue')
+    component: () => import('../pages/list/index.vue')
+  },
+  {
+    path: '/icon-preview',
+    name: 'iconPreview',
+    meta: {
+      needLogin: true,
+      allowRoles: ['admin'],
+      title: '图标预览'
+    },
+    component: () => import('../pages/icon/IconPreviewPage.vue')
   },
   {
     path: '/login',

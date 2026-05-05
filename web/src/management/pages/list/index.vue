@@ -9,7 +9,8 @@
         @select="handleSpaceSelect"
       />
       <div :class="['list-content', { 'list-content--agent': !isAdmin }]">
-        <div class="top">
+        <AgentManagePanel v-if="showAgentManagePanel" />
+        <div class="top" v-else>
           <h2>
             {{ tableTitle }}
           </h2>
@@ -177,9 +178,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import BaseList from './components/BaseList.vue'
 import RecycleBinList from './components/RecycleBinList.vue'
@@ -195,6 +196,7 @@ import AIGenerate from './components/AIGenerate.vue'
 import TopNav from '@/management/components/TopNav.vue'
 import CreateForm from '@/management/components/CreateForm.vue';
 import { MenuType } from '@/management/utils/workSpace'
+import AgentManagePanel from '@/management/pages/agent/components/AgentManagePanel.vue'
 
 import { useWorkSpaceStore } from '@/management/stores/workSpace'
 import { useSurveyListStore } from '@/management/stores/surveyList'
@@ -218,11 +220,16 @@ const {
   groupListTotal
 } = storeToRefs(workSpaceStore)
 const router = useRouter()
+const route = useRoute()
 const isAdmin = computed(() => userStore.userInfo?.role === 'admin')
+const showAgentManagePanel = computed(() => isAdmin.value && menuType.value === MenuType.AgentManage)
 
 const tableTitle = computed(() => {
   if (!isAdmin.value) {
     return '我的问卷'
+  }
+  if (menuType.value === MenuType.AgentManage) {
+    return '代理管理'
   }
   if (menuType.value === MenuType.PersonalGroup && !groupId.value) {
     return '我的空间'
@@ -258,6 +265,16 @@ const isRecycleBin = computed(() => menuType.value === MenuType.RecycleBin);
 
 const showAIGenerate = ref(false)
 
+const showSurveyDefaultView = async () => {
+  activeValue.value = 'all'
+  workSpaceStore.changeMenuType(MenuType.PersonalGroup)
+  workSpaceStore.changeGroup('all')
+  await fetchSurveyList({
+    pageSize: 10,
+    curPage: 1
+  })
+}
+
 const fetchSpaceList = async (params?: any) => {
   spaceLoading.value = true
   workSpaceStore.changeWorkSpace('')
@@ -282,21 +299,38 @@ const handleSpaceSelect = async (id: string) => {
   }
   activeValue.value = id
   switch (id) {
+    case MenuType.AgentManage:
+      workSpaceStore.changeMenuType(MenuType.AgentManage)
+      workSpaceStore.changeWorkSpace('')
+      workSpaceStore.changeGroup('')
+      if (route.name !== 'agents') {
+        router.push({ name: 'agents' })
+      }
+      break
     case MenuType.PersonalGroup:
       workSpaceStore.changeMenuType(MenuType.PersonalGroup)
       workSpaceStore.changeWorkSpace('')
+      if (route.name === 'agents') {
+        router.push({ name: 'survey' })
+      }
       await fetchGroupList()
       // isRecycleBin.value = false
       break
     case MenuType.SpaceGroup:
       workSpaceStore.changeMenuType(MenuType.SpaceGroup)
       workSpaceStore.changeWorkSpace('')
+      if (route.name === 'agents') {
+        router.push({ name: 'survey' })
+      }
       await fetchSpaceList()
       // isRecycleBin.value = false
       break
     case MenuType.RecycleBin:
       workSpaceStore.changeMenuType(MenuType.RecycleBin)
       workSpaceStore.changeWorkSpace('')
+      if (route.name === 'agents') {
+        router.push({ name: 'survey' })
+      }
       // isRecycleBin.value = true
       await fetchSurveyList()
       break
@@ -312,6 +346,9 @@ const handleSpaceSelect = async (id: string) => {
         } else if (parentMenu.id === MenuType.SpaceGroup) {
           workSpaceStore.changeWorkSpace(id)
         }
+      }
+      if (route.name === 'agents') {
+        router.push({ name: 'survey' })
       }
       listRef?.value?.resetCurrentPage()
       await fetchSurveyList()
@@ -340,9 +377,12 @@ onMounted(async () => {
   if (isAdmin.value) {
     await Promise.all([fetchGroupList(), fetchSpaceList()])
     getRecycleBinCount()
-    activeValue.value = 'all'
-    workSpaceStore.changeGroup('all')
-    await fetchSurveyList()
+    if (route.name === 'agents') {
+      activeValue.value = MenuType.AgentManage
+      workSpaceStore.changeMenuType(MenuType.AgentManage)
+      return
+    }
+    await showSurveyDefaultView()
     return
   }
 
@@ -351,6 +391,25 @@ onMounted(async () => {
   workSpaceStore.changeGroup('all')
   await fetchSurveyList()
 })
+
+watch(
+  () => route.name,
+  async (name) => {
+    if (!isAdmin.value) {
+      return
+    }
+
+    if (name === 'agents') {
+      activeValue.value = MenuType.AgentManage
+      workSpaceStore.changeMenuType(MenuType.AgentManage)
+      return
+    }
+
+    if (menuType.value === MenuType.AgentManage) {
+      await showSurveyDefaultView()
+    }
+  }
+)
 
 const modifyType = ref('add')
 const showSpaceModify = ref(false)

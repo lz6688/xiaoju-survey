@@ -119,7 +119,13 @@ const handleMenu = (id: string) => {
   z-index: 999;
   overflow-x: hidden;
   overflow-y: auto;
+  scrollbar-width: none;
   box-shadow: 0 2px 0 0 rgba(0, 0, 0, 0.04);
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
   :deep(.el-menu-item) {
     width: 200px;
     height: 36px;

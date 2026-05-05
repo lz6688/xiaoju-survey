@@ -10,6 +10,7 @@
       :options="selectOptions"
       :loading="loading"
       placeholder="请输入账号名搜索"
+      @focus="handleFocus"
       @change="handleSelect"
     />
     <MemberList
@@ -25,7 +26,7 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
 import MemberList from './MemberList.vue'
-import { getUserList } from '@/management/api/space'
+import { getAgentList, getUserList } from '@/management/api/space'
 import {
   AccountRole,
   accountRoleLabels,
@@ -54,28 +55,51 @@ const value = ref('')
 const selectOptions = ref<ListItem[]>([])
 const loading = ref(false)
 
-const remoteMethod = async (q: string) => {
-  const query = q.trim()
-  if (query !== '') {
-    loading.value = true
-    const res: any = await getUserList(query)
-    if (res.code === CODE_MAP.SUCCESS) {
-      selectOptions.value = res.data.map((item: any) => {
-        // 不可以选中自己
-        const currentUser = item.username === userStore.userInfo?.username
-        const role = (item.role || AccountRole.Agent) as AccountRole
-        return {
-          value: item.userId,
-          label: `${item.username}（${accountRoleLabels[role] || '代理'}）`,
-          rawLabel: item.username,
-          role,
-          disabled: props.members.map((item) => item.userId).includes(item.userId) || currentUser
-        }
-      })
-      loading.value = false
+const mapOptions = (list: any[] = []) => {
+  return list.map((item: any) => {
+    const currentUser = item.username === userStore.userInfo?.username
+    const role = (item.role || AccountRole.Agent) as AccountRole
+    return {
+      value: item.userId,
+      label: `${item.username}（${accountRoleLabels[role] || '代理'}）`,
+      rawLabel: item.username,
+      role,
+      disabled: props.members.map((member) => member.userId).includes(item.userId) || currentUser
     }
+  })
+}
+
+const fetchDefaultAgents = async () => {
+  loading.value = true
+  const res: any = await getAgentList('')
+  if (res.code === CODE_MAP.SUCCESS) {
+    selectOptions.value = mapOptions(res.data || [])
   } else {
     selectOptions.value = []
+  }
+  loading.value = false
+}
+
+const remoteMethod = async (q: string) => {
+  const query = q.trim()
+  if (query === '') {
+    await fetchDefaultAgents()
+    return
+  }
+
+  loading.value = true
+  const res: any = await getUserList(query)
+  if (res.code === CODE_MAP.SUCCESS) {
+    selectOptions.value = mapOptions(res.data || [])
+  } else {
+    selectOptions.value = []
+  }
+  loading.value = false
+}
+
+const handleFocus = async () => {
+  if (!selectOptions.value.length) {
+    await fetchDefaultAgents()
   }
 }
 const handleSelect = (val: string) => {

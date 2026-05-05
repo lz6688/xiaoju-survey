@@ -3,6 +3,8 @@ node_modules
 /dist
 /output
 
+server/ip2region
+
 # local env files
 # .env.*.local 提交 .env.development.local，使得用户能够在本地修改
 .env.production.local

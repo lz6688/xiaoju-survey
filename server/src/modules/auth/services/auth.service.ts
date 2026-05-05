@@ -11,6 +11,7 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly userService: UserService,
   ) {}
+  // 生成token
   async generateToken({ _id, username }: { _id: string; username: string }) {
     const secret = this.configService.get<string>('XIAOJU_SURVEY_JWT_SECRET');
     const expiresIn: StringValue = this.configService.get<StringValue>(
@@ -22,6 +23,7 @@ export class AuthService {
     return sign({ _id, username }, secret, signOptions);
   }
 
+  // 验证token
   async verifyToken(token: string) {
     let decoded;
     try {

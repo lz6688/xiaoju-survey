@@ -29,6 +29,7 @@ import {
 
 import { useSurveyListStore } from './surveyList'
 
+// 工作空间存储
 export const useWorkSpaceStore = defineStore('workSpace', () => {
   // list空间
   const spaceMenus = ref([
@@ -61,12 +62,14 @@ export const useWorkSpaceStore = defineStore('workSpace', () => {
 
   const surveyListStore = useSurveyListStore()
 
+  // 获取空间列表
   async function getSpaceList(params = { curPage: 1 }) {
     try {
       const res: any = await getSpaceListReq(params)
 
       if (res.code === CODE_MAP.SUCCESS) {
         const { list, count } = res.data
+        // 转换数组结构
         const workSpace = list.map((item: SpaceDetail) => {
           return {
             id: item._id,
@@ -85,6 +88,7 @@ export const useWorkSpaceStore = defineStore('workSpace', () => {
     }
   }
 
+  // 获取空间详情
   async function getSpaceDetail(id: string) {
     try {
       const _id = id || workSpaceId.value
@@ -99,16 +103,19 @@ export const useWorkSpaceStore = defineStore('workSpace', () => {
     }
   }
 
+  // 更改菜单类型
   function changeMenuType(id: MenuType) {
     menuType.value = id
   }
 
+  // 更改空间
   function changeWorkSpace(id: string) {
     workSpaceId.value = id
     groupId.value = ''
     surveyListStore.resetSearch()
   }
 
+  // 更改组
   function changeGroup(id: string) {
     groupId.value = id
     workSpaceId.value = ''
@@ -249,7 +256,7 @@ export const useWorkSpaceStore = defineStore('workSpace', () => {
     }
   }
 
-
+  // 获取回收站中的文件数量
   async function getRecycleBinCount(params?:  any) {
     const recycleBinMenu = spaceMenus.value.find(menu => menu.id === MenuType.RecycleBin);
 

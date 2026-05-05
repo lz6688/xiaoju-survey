@@ -15,6 +15,7 @@ import 'element-plus/theme-chalk/src/overlay.scss'
 import { useUserStore } from '@/management/stores/user'
 import { useEditStore } from '@/management/stores/edit'
 
+// 定义路由规则
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
@@ -177,11 +178,14 @@ const routes: RouteRecordRaw[] = [
   }
 ]
 
+// 创建路由
 const router = createRouter({
   history: createWebHistory('/management'),
   routes
 })
 
+
+// 路由跳转之前
 router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore()
   // 初始化用户信息
@@ -200,6 +204,7 @@ router.beforeEach(async (to, from, next) => {
   }
 })
 
+// 处理登录防护机制
 async function handleLoginGuard(
   to: RouteLocationNormalized,
   from: RouteLocationNormalized,
@@ -216,6 +221,8 @@ async function handleLoginGuard(
   }
 }
 
+
+// 处理权限机制
 async function handlePermissionsGuard(
   to: RouteLocationNormalized,
   from: RouteLocationNormalized,
@@ -243,6 +250,7 @@ async function handlePermissionsGuard(
   }
 }
 
+// 处理请求权限
 function hasRequiredPermissions(requiredPermissions: string[], userPermissions: string[]) {
   return requiredPermissions.some((permission) => userPermissions.includes(permission))
 }

@@ -407,12 +407,14 @@ const openTextImport = () => {
   createMethod.value = 'textImport'
 }
 
+// 开启人工智能
 const opemAIGenerate = () => { 
   showCreateMethod.value = false;
   showAIGenerate.value = true;
   createMethod.value = 'AIGenerate'
 }
 
+// 显示创建表单
 const onShowCreateForm = () => {
   if (questionList.value.length <= 0) {
     ElMessage({
@@ -424,6 +426,7 @@ const onShowCreateForm = () => {
   showCreateForm.value = true
 }
 
+// 确认创建
 const onConfirmCreate = async (formValue: { title: string; remark?: string; surveyType: string; groupId?: string }, callback: (success: boolean) => void) => {
   try {
     switch(createMethod.value) {

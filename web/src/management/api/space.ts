@@ -1,5 +1,6 @@
 import axios from './base'
-// 空间
+
+// 创建空间
 export const createSpace = ({ name, description, members }: any) => {
   return axios.post('/workspace', { name, description, members })
 }
@@ -8,6 +9,7 @@ export const updateSpace = ({ workspaceId, name, description, members }: any) =>
   return axios.post(`/workspace/${workspaceId}`, { name, description, members })
 }
 
+// 获取空间列表
 export const getSpaceList = (params: any) => {
   return axios.get('/workspace', {
     params

@@ -4,6 +4,7 @@ package-lock.json
 # compiled output
 /dist
 /node_modules
+ip2region
 
 # Logs
 logs

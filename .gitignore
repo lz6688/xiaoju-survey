@@ -1,6 +1,8 @@
 .DS_Store
 node_modules
 dist
+dist_web
+dist_server
 
 package-lock.json
 

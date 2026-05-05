@@ -144,6 +144,7 @@ const passwordValidator = (_: any, value: any, callback: any) => {
   callback()
 }
 
+// 密码强度处理
 const passwordStrengthHandle = async (value: string) => {
   const res: any = await getPasswordStrength(value)
   if (res.code === CODE_MAP.SUCCESS) {
@@ -184,6 +185,7 @@ const captchaImgData = ref<string>('')
 const formDataRef = ref<any>(null)
 const passwordStrength = ref<'Strong' | 'Medium' | 'Weak'>()
 
+// 提交表单
 const submitForm = (type: 'login' | 'register') => {
   formDataRef.value.validate(async (valid: boolean) => {
     if (valid) {
@@ -193,6 +195,7 @@ const submitForm = (type: 'login' | 'register') => {
           register
         }
         pending[type] = true
+        // 发送请求
         const res: any = await submitTypes[type]({
           username: formData.name,
           password: formData.password,
@@ -213,6 +216,7 @@ const submitForm = (type: 'login' | 'register') => {
           name: 'survey'
         }
         if (route.query.redirect) {
+          // 解码url
           redirect = decodeURIComponent(route.query.redirect as string)
         }
         router.replace(redirect)
@@ -226,6 +230,7 @@ const submitForm = (type: 'login' | 'register') => {
   })
 }
 
+// 刷新验证码
 const refreshCaptcha = async () => {
   try {
     const res: any = await refreshCaptchaApi({

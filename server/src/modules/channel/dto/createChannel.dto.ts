@@ -12,6 +12,7 @@ export class CreateChannelDto {
   static validate(data) {
     return Joi.object({
       name: Joi.string().required(),
+      surveyId: Joi.string().required(),
       type: Joi.string()
         .valid(...Object.values(CHANNEL_TYPE))
         .required(),

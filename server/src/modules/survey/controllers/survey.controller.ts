@@ -316,6 +316,7 @@ export class SurveyController {
     SURVEY_PERMISSION.SURVEY_COOPERATION_MANAGE,
     SURVEY_PERMISSION.SURVEY_RESPONSE_MANAGE,
   ])
+  @SetMetadata('agentAccess', true)
   @UseGuards(Authentication)
   async getSurvey(
     @Query()

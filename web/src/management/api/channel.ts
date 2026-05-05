@@ -14,10 +14,10 @@ export const getChannelList = (params: any) => {
   })
 }
 
-export const deleteChannel = ({ channelId }: any) => {
-  return axios.post(`/channel/delete`, { channelId })
+export const deleteChannel = ({ channelId, surveyId }: any) => {
+  return axios.post('/channel/delete', { channelId, surveyId })
 }
 
-export const changeChannelStatus = (channelId: string, status: string) => {
-  return axios.post(`/channel/status`, { channelId, status})
+export const changeChannelStatus = (channelId: string, status: string, surveyId: string) => {
+  return axios.post('/channel/status', { channelId, status, surveyId })
 }

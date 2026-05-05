@@ -5,6 +5,7 @@ import {
   HttpCode,
   Get,
   Query,
+  UseGuards,
   Request,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -15,6 +16,7 @@ import { HttpException } from 'src/exceptions/httpException';
 import { EXCEPTION_CODE } from 'src/enums/exceptionCode';
 import { create } from 'svg-captcha';
 import { ApiTags } from '@nestjs/swagger';
+import { Authentication } from 'src/guards/authentication.guard';
 
 const passwordReg = /^[a-zA-Z0-9!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]+$/;
 
@@ -28,6 +30,26 @@ export class AuthController {
     private readonly authService: AuthService,
   ) {}
 
+  private validatePassword(password: string) {
+    if (!password) {
+      throw new HttpException('密码无效', EXCEPTION_CODE.PASSWORD_INVALID);
+    }
+
+    if (password.length < 6 || password.length > 16) {
+      throw new HttpException(
+        '密码长度在 6 到 16 个字符',
+        EXCEPTION_CODE.PASSWORD_INVALID,
+      );
+    }
+
+    if (!passwordReg.test(password)) {
+      throw new HttpException(
+        '密码只能输入数字、字母、特殊字符',
+        EXCEPTION_CODE.PASSWORD_INVALID,
+      );
+    }
+  }
+
   @Post('/register')
   @HttpCode(200)
   async register(
@@ -39,23 +61,7 @@ export class AuthController {
       captcha: string;
     },
   ) {
-    if (!userInfo.password) {
-      throw new HttpException('密码无效', EXCEPTION_CODE.PASSWORD_INVALID);
-    }
-
-    if (userInfo.password.length < 6 || userInfo.password.length > 16) {
-      throw new HttpException(
-        '密码长度在 6 到 16 个字符',
-        EXCEPTION_CODE.PASSWORD_INVALID,
-      );
-    }
-
-    if (!passwordReg.test(userInfo.password)) {
-      throw new HttpException(
-        '密码只能输入数字、字母、特殊字符',
-        EXCEPTION_CODE.PASSWORD_INVALID,
-      );
-    }
+    this.validatePassword(userInfo.password);
 
     const isCorrect = await this.captchaService.checkCaptchaIsCorrect({
       captcha: userInfo.captcha,
@@ -74,6 +80,7 @@ export class AuthController {
     const token = await this.authService.generateToken({
       username: user.username,
       _id: user._id.toString(),
+      role: user.role,
     });
     // 验证过的验证码要删掉，防止被别人保存重复调用
     this.captchaService.deleteCaptcha(userInfo.captchaId);
@@ -82,6 +89,7 @@ export class AuthController {
       data: {
         token,
         username: user.username,
+        role: user.role,
       },
     };
   }
@@ -131,6 +139,7 @@ export class AuthController {
       token = await this.authService.generateToken({
         username: user.username,
         _id: user._id.toString(),
+        role: user.role,
       });
       // 验证过的验证码要删掉，防止被别人保存重复调用
       this.captchaService.deleteCaptcha(userInfo.captchaId);
@@ -148,7 +157,31 @@ export class AuthController {
       data: {
         token,
         username: user.username,
+        role: user.role,
       },
+    };
+  }
+
+  @Post('/changePassword')
+  @UseGuards(Authentication)
+  @HttpCode(200)
+  async changePassword(
+    @Body()
+    payload: {
+      oldPassword: string;
+      newPassword: string;
+    },
+    @Request() req,
+  ) {
+    this.validatePassword(payload.newPassword);
+    await this.userService.changePassword({
+      userId: req.user._id.toString(),
+      oldPassword: payload.oldPassword,
+      newPassword: payload.newPassword,
+    });
+
+    return {
+      code: 200,
     };
   }
 

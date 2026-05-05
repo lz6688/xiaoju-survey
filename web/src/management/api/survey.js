@@ -73,6 +73,13 @@ export const pausingSurvey = (surveyId) => {
   })
 }
 
+export const assignAgents = ({ surveyId, agentIds }) => {
+  return axios.post('/survey/assignAgents', {
+    surveyId,
+    agentIds
+  })
+}
+
 export const upgradeSubStatus = () => {
   return axios.get('/upgrade/subStatus')
 }

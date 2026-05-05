@@ -8,6 +8,7 @@ import { HttpException } from 'src/exceptions/httpException';
 import { EXCEPTION_CODE } from 'src/enums/exceptionCode';
 import { PluginManager } from 'src/securityPlugin/pluginManager';
 import { GROUP_STATE } from 'src/enums/surveyGroup';
+import { USER_ROLE } from 'src/enums/user';
 
 @Injectable()
 export class SurveyMetaService {
@@ -75,6 +76,7 @@ export class SurveyMetaService {
       createFrom,
       workspaceId,
       groupId: groupId && groupId !== '' ? groupId : null,
+      assignedAgentIds: [],
     });
 
     return await this.surveyRepository.save(newSurvey);
@@ -175,6 +177,7 @@ export class SurveyMetaService {
     pageSize: number;
     username: string;
     userId: string;
+    role?: USER_ROLE;
     filter: Record<string, any>;
     order: Record<string, any>;
     workspaceId?: string;
@@ -186,6 +189,7 @@ export class SurveyMetaService {
       pageNum,
       pageSize,
       userId,
+      role,
       // username,
       workspaceId,
       groupId,
@@ -241,9 +245,11 @@ export class SurveyMetaService {
       if (condition.filter['curStatus.status']) {
         otherQuery['subStatus.status'] = RECORD_SUB_STATUS.DEFAULT;
       }
-      if (workspaceId) {
+      if (role === USER_ROLE.AGENT) {
+        otherQuery.assignedAgentIds = userId;
+      } else if (workspaceId) {
         otherQuery.workspaceId = workspaceId;
-      } else {
+      } else if (role !== USER_ROLE.ADMIN) {
         otherQuery.$and = [
           {
             workspaceId: { $exists: false },
@@ -283,6 +289,8 @@ export class SurveyMetaService {
         //   },
         // ];
         otherQuery.ownerId = userId;
+      } else if (workspaceId) {
+        otherQuery.workspaceId = workspaceId;
       }
 
       if (Array.isArray(query.$or)) {
@@ -345,6 +353,32 @@ export class SurveyMetaService {
       isCompleteDeleted: {$ne: true},
     });
     return surveyMetaList;
+  }
+
+  async assignAgents({
+    surveyId,
+    agentIds,
+    operator,
+    operatorId,
+  }: {
+    surveyId: string;
+    agentIds: string[];
+    operator: string;
+    operatorId: string;
+  }) {
+    return this.surveyRepository.updateOne(
+      {
+        _id: new ObjectId(surveyId),
+      },
+      {
+        $set: {
+          assignedAgentIds: agentIds,
+          operator,
+          operatorId,
+          updatedAt: new Date(),
+        },
+      },
+    );
   }
 
 

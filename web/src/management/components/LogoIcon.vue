@@ -4,12 +4,16 @@
   </div>
 </template>
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useUserStore } from '@/management/stores/user'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
+const userStore = useUserStore()
+const homeRouteName = computed(() => (userStore.userInfo?.role === 'admin' ? 'survey' : 'agentSurvey'))
 
 const handleNavigate = () => {
-  router.push({ name: 'survey' })
+  router.push({ name: homeRouteName.value })
 }
 </script>
 <style lang="scss" scoped>

@@ -5,6 +5,8 @@ import {
   HttpCode,
   UseGuards,
   Request,
+  Body,
+  Post,
 } from '@nestjs/common';
 
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
@@ -52,6 +54,57 @@ export class UserController {
   }
 
   @UseGuards(Authentication)
+  @Get('/getAgentList')
+  @HttpCode(200)
+  async getAgentList(
+    @Query()
+    queryInfo: GetUserListDto,
+  ) {
+    const { value, error } = GetUserListDto.validate(queryInfo);
+    if (error) {
+      throw new HttpException('参数有误', EXCEPTION_CODE.PARAMETER_ERROR);
+    }
+
+    const userList = await this.userService.getAgentList({
+      username: value.username,
+      skip: (value.pageIndex - 1) * value.pageSize,
+      take: value.pageSize,
+    });
+
+    return {
+      code: 200,
+      data: userList.map((item) => {
+        return {
+          userId: item._id.toString(),
+          username: item.username,
+          role: item.role,
+        };
+      }),
+    };
+  }
+
+  @UseGuards(Authentication)
+  @Post('/createAgent')
+  @HttpCode(200)
+  async createAgent(
+    @Body()
+    payload: {
+      username: string;
+      password: string;
+    },
+  ) {
+    const user = await this.userService.createAgent(payload);
+    return {
+      code: 200,
+      data: {
+        userId: user._id.toString(),
+        username: user.username,
+        role: user.role,
+      },
+    };
+  }
+
+  @UseGuards(Authentication)
   @Get('/getUserInfo')
   async getUserInfo(@Request() req) {
     return {
@@ -59,6 +112,7 @@ export class UserController {
       data: {
         userId: req.user._id.toString(),
         username: req.user.username,
+        role: req.user.role,
       },
     };
   }

@@ -2,13 +2,18 @@
   <div class="question-list-root">
     <TopNav></TopNav>
     <div class="content-wrap">
-      <SliderBar :menus="spaceMenus" :activeValue="activeValue" @select="handleSpaceSelect" />
-      <div class="list-content">
+      <SliderBar
+        v-if="isAdmin"
+        :menus="spaceMenus"
+        :activeValue="activeValue"
+        @select="handleSpaceSelect"
+      />
+      <div :class="['list-content', { 'list-content--agent': !isAdmin }]">
         <div class="top">
           <h2>
             {{ tableTitle }}
           </h2>
-          <div class="operation">
+          <div class="operation" v-if="isAdmin">
             <el-button
               class="btn create-btn"
               type="default"
@@ -193,11 +198,13 @@ import { MenuType } from '@/management/utils/workSpace'
 
 import { useWorkSpaceStore } from '@/management/stores/workSpace'
 import { useSurveyListStore } from '@/management/stores/surveyList'
+import { useUserStore } from '@/management/stores/user'
 import { type IWorkspace } from '@/management/utils/workSpace'
 import { createSurvey } from '@/management/api/survey'
 
 const workSpaceStore = useWorkSpaceStore()
 const surveyListStore = useSurveyListStore()
+const userStore = useUserStore()
 
 const { surveyList, surveyTotal } = storeToRefs(surveyListStore)
 const {
@@ -211,8 +218,12 @@ const {
   groupListTotal
 } = storeToRefs(workSpaceStore)
 const router = useRouter()
+const isAdmin = computed(() => userStore.userInfo?.role === 'admin')
 
 const tableTitle = computed(() => {
+  if (!isAdmin.value) {
+    return '我的问卷'
+  }
   if (menuType.value === MenuType.PersonalGroup && !groupId.value) {
     return '我的空间'
   } else if (menuType.value === MenuType.SpaceGroup && !workSpaceId.value) {
@@ -326,10 +337,17 @@ const fetchSurveyList = async (params?: any) => {
 }
 
 onMounted(async () => {
-  await Promise.all([fetchGroupList(), fetchSpaceList()])
-  // 异步获取回收站数量
-  getRecycleBinCount()
+  if (isAdmin.value) {
+    await Promise.all([fetchGroupList(), fetchSpaceList()])
+    getRecycleBinCount()
+    activeValue.value = 'all'
+    workSpaceStore.changeGroup('all')
+    await fetchSurveyList()
+    return
+  }
+
   activeValue.value = 'all'
+  workSpaceStore.changeMenuType(MenuType.PersonalGroup)
   workSpaceStore.changeGroup('all')
   await fetchSurveyList()
 })
@@ -577,6 +595,10 @@ const onAIGenerteChange = (newQuestionList: Array<any>) => {
         }
       }
     }
+  }
+
+  .list-content--agent {
+    padding-left: 32px;
   }
 }
 .create-method-list {

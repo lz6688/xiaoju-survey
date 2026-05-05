@@ -110,6 +110,13 @@
       @on-close-codify="onCloseModify"
     />
     <CooperModify :modifyId="cooperId" :visible="cooperModify" @on-close-codify="onCooperClose" />
+    <AssignAgentDialog
+      :visible="showAssignDialog"
+      :survey-id="assignSurveyId"
+      :agent-ids="assignAgentIds"
+      @close="showAssignDialog = false"
+      @success="handleAssignSuccess"
+    />
   </div>
 </template>
 
@@ -130,6 +137,7 @@ import { QOP_MAP } from '@/management/utils/constant.ts'
 import { deleteSurvey, pausingSurvey } from '@/management/api/survey'
 import { useWorkSpaceStore } from '@/management/stores/workSpace'
 import { useSurveyListStore } from '@/management/stores/surveyList'
+import { useUserStore } from '@/management/stores/user'
 import ModifyDialog from './ModifyDialog.vue'
 import TagModule from './TagModule.vue'
 import StateModule from './StateModule.vue'
@@ -138,6 +146,7 @@ import TextSearch from './TextSearch.vue'
 import TextSelect from './TextSelect.vue'
 import TextButton from './TextButton.vue'
 import { SurveyPermissions } from '@/management/utils/workSpace'
+import AssignAgentDialog from './AssignAgentDialog.vue'
 
 import {
   fieldConfig,
@@ -151,6 +160,7 @@ import {
 
 const surveyListStore = useSurveyListStore()
 const workSpaceStore = useWorkSpaceStore()
+const userStore = useUserStore()
 const { workSpaceId, groupAllList, menuType } = storeToRefs(workSpaceStore)
 const router = useRouter()
 const props = defineProps({
@@ -170,10 +180,15 @@ const props = defineProps({
 const emit = defineEmits(['refresh'])
 const fields = ['type', 'title', 'remark', 'owner', 'state', 'createdAt', 'updatedAt']
 const showModify = ref(false)
+const showAssignDialog = ref(false)
+const assignSurveyId = ref('')
+const assignAgentIds = ref([])
 const modifyType = ref('')
 const questionInfo = ref({})
 const currentPage = ref(1)
 const { searchVal, selectValueMap, buttonValueMap } = storeToRefs(surveyListStore)
+const isAgent = computed(() => userStore.userInfo?.role === 'agent')
+const isAdmin = computed(() => userStore.userInfo?.role === 'admin')
 
 const currentComponent = computed(() => {
   return (componentName) => {
@@ -221,7 +236,7 @@ const order = computed(() => {
 })
 
 const onRefresh = async () => {
-  let params = {
+  const params = {
     curPage: currentPage.value,
     order: order.value
   }
@@ -232,6 +247,19 @@ const onRefresh = async () => {
 }
 
 const getToolConfig = (row) => {
+  if (isAgent.value) {
+    return [
+      {
+        key: 'analysis',
+        label: '数据'
+      },
+      {
+        key: 'release',
+        label: '投放'
+      }
+    ]
+  }
+
   let funcList = []
   const permissionsBtn = [
     {
@@ -263,12 +291,19 @@ const getToolConfig = (row) => {
     {
       key: 'cooper',
       label: '协作'
+    },
+    {
+      key: 'assign',
+      label: '分配'
     }
   ]
   if (!workSpaceId.value) {
     if (!row.isCollaborated) {
       // 创建人显示协作按钮
       funcList = funcList.concat(permissionsBtn)
+      if (!isAdmin.value) {
+        funcList = funcList.filter((item) => item.key !== 'assign')
+      }
     } else {
       if (row.currentPermissions.includes(SurveyPermissions.DataManage)) {
         // 协作人判断权限显示数据分析按钮
@@ -311,13 +346,26 @@ const getToolConfig = (row) => {
           label: '协作'
         })
       }
+      if (isAdmin.value) {
+        funcList.push({
+          key: 'assign',
+          label: '分配'
+        })
+      }
     }
   } else {
     // 团队空间没有开放协作功能，不需要判断按钮状态
-    permissionsBtn.splice(-1)
-    funcList = permissionsBtn
+    funcList = permissionsBtn.filter((item) => {
+      if (item.key === 'cooper') {
+        return false
+      }
+      if (item.key === 'assign') {
+        return isAdmin.value
+      }
+      return true
+    })
   }
-  const order = ['edit', 'analysis', 'release', 'pausing', 'delete', 'copy', 'cooper']
+  const order = ['edit', 'analysis', 'release', 'pausing', 'delete', 'copy', 'cooper', 'assign']
   if (
     row.curStatus.status === curStatus.new.value ||
     row.subStatus.status === subStatus.pausing.value
@@ -359,6 +407,11 @@ const handleClick = (key, data) => {
       return
     case 'cooper':
       onCooper(data)
+      return
+    case 'assign':
+      assignSurveyId.value = data._id
+      assignAgentIds.value = Array.isArray(data.assignedAgentIds) ? data.assignedAgentIds : []
+      showAssignDialog.value = true
       return
     case 'pausing':
       onPausing(data)
@@ -428,6 +481,15 @@ const onCloseModify = (type) => {
   }
 }
 const onRowClick = (row) => {
+  if (isAgent.value) {
+    router.push({
+      name: 'publish',
+      params: {
+        id: row._id
+      }
+    })
+    return
+  }
   router.push({
     name: 'QuestionEditIndex',
     params: {
@@ -459,6 +521,10 @@ const onCooper = async (row) => {
 }
 const onCooperClose = () => {
   cooperModify.value = false
+}
+const handleAssignSuccess = () => {
+  showAssignDialog.value = false
+  onRefresh()
 }
 const resetCurrentPage = () => {
   currentPage.value = 1

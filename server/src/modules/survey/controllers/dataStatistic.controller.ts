@@ -39,6 +39,7 @@ export class DataStatisticController {
   @UseGuards(SurveyGuard)
   @SetMetadata('surveyId', 'query.surveyId')
   @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_RESPONSE_MANAGE])
+  @SetMetadata('agentAccess', true)
   @UseGuards(Authentication)
   async data(
     @Query()
@@ -87,6 +88,7 @@ export class DataStatisticController {
   @UseGuards(SurveyGuard)
   @SetMetadata('surveyId', 'query.surveyId')
   @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_RESPONSE_MANAGE])
+  @SetMetadata('agentAccess', true)
   @UseGuards(Authentication)
   async aggregationStatis(@Query() queryInfo: AggregationStatisDto) {
     // 聚合统计

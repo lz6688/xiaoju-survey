@@ -32,6 +32,7 @@ import { Channel } from 'src/models/channel.entity';
 import { CHANNEL_STATUS } from 'src/enums/channel';
 import { SurveyGuard } from 'src/guards/survey.guard';
 import { SURVEY_PERMISSION } from 'src/enums/surveyPermission';
+import { USER_ROLE } from 'src/enums/user';
 
 @ApiTags('channel')
 @Controller('/api/channel')
@@ -51,6 +52,7 @@ export class ChannelController {
   @UseGuards(Authentication, SurveyGuard)
   @SetMetadata('surveyId', 'body.surveyId')
   @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_CONF_MANAGE])
+  @SetMetadata('agentAccess', true)
   async create(@Body() channel: CreateChannelDto, @Request() req) {
     const { value, error } = CreateChannelDto.validate(channel);
     if (error) {
@@ -84,6 +86,7 @@ export class ChannelController {
   @UseGuards(Authentication, SurveyGuard)
   @SetMetadata('surveyId', 'query.surveyId')
   @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_CONF_MANAGE])
+  @SetMetadata('agentAccess', true)
   @HttpCode(200)
   async findAll(@Request() req, @Query() queryInfo: GetChannelListDto) {
     const { value, error } = GetChannelListDto.validate(queryInfo);
@@ -99,9 +102,12 @@ export class ChannelController {
     const curPage = Number(value.curPage);
     const pageSize = Number(value.pageSize);
 
+    const ownerId =
+      req.user.role === USER_ROLE.AGENT ? req.user._id.toString() : undefined;
     // 查询当前问卷的渠道列表
     const channelList = await this.channelService.findAllBySurveyId(
       queryInfo.surveyId,
+      ownerId,
     );
     const idList = channelList.map((item) => item._id);
     // 遍历查询渠道的回收量
@@ -153,6 +159,7 @@ export class ChannelController {
   @UseGuards(Authentication, SurveyGuard)
   @SetMetadata('surveyId', 'body.surveyId')
   @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_CONF_MANAGE])
+  @SetMetadata('agentAccess', true)
   async update(@Body() channel: Partial<Channel>, @Request() req) {
     const id = req.body.channelId;
     const operatorId = req.user._id.toString();
@@ -160,6 +167,8 @@ export class ChannelController {
       id,
       channel,
       operatorId,
+      ownerId:
+        req.user.role === USER_ROLE.AGENT ? req.user._id.toString() : undefined,
     });
     this.logger.info(`updateRes: ${JSON.stringify(updateRes)}`);
     return {
@@ -204,6 +213,7 @@ export class ChannelController {
   @UseGuards(Authentication, SurveyGuard)
   @SetMetadata('surveyId', 'body.surveyId')
   @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_CONF_MANAGE])
+  @SetMetadata('agentAccess', true)
   @HttpCode(200)
   async updateStatus(
     @Body() parama: Partial<{ status: CHANNEL_STATUS }>,
@@ -215,6 +225,8 @@ export class ChannelController {
       id,
       status: parama.status,
       operatorId,
+      ownerId:
+        req.user.role === USER_ROLE.AGENT ? req.user._id.toString() : undefined,
     });
     this.logger.info(`updateRes: ${JSON.stringify(updateRes)}`);
     return {
@@ -227,11 +239,16 @@ export class ChannelController {
   @UseGuards(Authentication, SurveyGuard)
   @SetMetadata('surveyId', 'body.surveyId')
   @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_CONF_MANAGE])
+  @SetMetadata('agentAccess', true)
   @HttpCode(200)
   async delete(@Request() req) {
     const id = req.body.channelId;
     const operatorId = req.user._id.toString();
-    const deleteRes = await this.channelService.delete(id, { operatorId });
+    const deleteRes = await this.channelService.delete(id, {
+      operatorId,
+      ownerId:
+        req.user.role === USER_ROLE.AGENT ? req.user._id.toString() : undefined,
+    });
     this.logger.info(`res: ${JSON.stringify(deleteRes)}`);
     return {
       code: 200,

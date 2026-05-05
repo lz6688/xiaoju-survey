@@ -54,9 +54,18 @@ export const useChannelStore = defineStore('channel', () => {
     }
   }
 
-  async function deleteChannel(payload: any) {
+  const updateChannel = async ({ channelId, name }: any) => {
     try {
-      const res: any = await deleteChannelReq(payload)
+      await updateChannelReq({ channelId, surveyId: surveyId.value, name })
+      getChannelList()
+    } catch (err) {
+      ElMessage.error('删除失败' + err)
+    }
+  }
+
+  const deleteChannel = async ({ channelId }: any) => {
+    try {
+      const res: any = await deleteChannelReq({ channelId, surveyId: surveyId.value })
 
       if (res.code === CODE_MAP.SUCCESS) {
         ElMessage.success('删除成功')
@@ -69,23 +78,15 @@ export const useChannelStore = defineStore('channel', () => {
     }
   }
 
-   const updateChannel = async ({ channelId, name }: any) => {
+  const changeChannelStatus = async ({ channelId, status }: any) => {
     try {
-      await updateChannelReq({ channelId, name })
+      await changeChannelStatusReq(channelId, status, surveyId.value)
       getChannelList()
     } catch (err) {
       ElMessage.error('删除失败' + err)
     }
-    
   }
-  const changeChannelStatus = async ({channelId, status} : any) => {
-    try {
-      await changeChannelStatusReq(channelId, status)
-      getChannelList()
-    } catch (err) {
-      ElMessage.error('删除失败' + err)
-    }
-  } 
+
   return {
     channelList,
     channelTotal,

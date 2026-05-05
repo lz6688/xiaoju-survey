@@ -7,6 +7,7 @@ import { CollaboratorService } from 'src/modules/survey/services/collaborator.se
 import { SurveyMetaService } from 'src/modules/survey/services/surveyMeta.service';
 import { SurveyNotFoundException } from 'src/exceptions/surveyNotFoundException';
 import { NoPermissionException } from 'src/exceptions/noPermissionException';
+import { USER_ROLE } from 'src/enums/user';
 
 @Injectable()
 export class SurveyGuard implements CanActivate {
@@ -39,6 +40,10 @@ export class SurveyGuard implements CanActivate {
 
     request.surveyMeta = surveyMeta;
 
+    if (user.role === USER_ROLE.ADMIN) {
+      return true;
+    }
+
     // 兼容老的问卷没有ownerId
     if (
       surveyMeta.ownerId === user._id.toString() ||
@@ -46,6 +51,22 @@ export class SurveyGuard implements CanActivate {
     ) {
       // 问卷的owner，可以访问和操作问卷
       return true;
+    }
+
+    if (user.role === USER_ROLE.AGENT) {
+      const agentAccess = this.reflector.get<boolean>(
+        'agentAccess',
+        context.getHandler(),
+      );
+      const assignedAgentIds = Array.isArray(surveyMeta.assignedAgentIds)
+        ? surveyMeta.assignedAgentIds
+        : [];
+
+      if (assignedAgentIds.includes(user._id.toString()) && agentAccess) {
+        return true;
+      }
+
+      throw new NoPermissionException('没有权限');
     }
 
     if (surveyMeta.workspaceId) {

@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { sign, verify, SignOptions } from 'jsonwebtoken';
 import { StringValue } from 'ms';
 import { UserService } from './user.service';
+import { USER_ROLE } from 'src/enums/user';
 
 @Injectable()
 export class AuthService {
@@ -12,7 +13,15 @@ export class AuthService {
     private readonly userService: UserService,
   ) {}
   // 生成token
-  async generateToken({ _id, username }: { _id: string; username: string }) {
+  async generateToken({
+    _id,
+    username,
+    role,
+  }: {
+    _id: string;
+    username: string;
+    role?: USER_ROLE;
+  }) {
     const secret = this.configService.get<string>('XIAOJU_SURVEY_JWT_SECRET');
     const expiresIn: StringValue = this.configService.get<StringValue>(
       'XIAOJU_SURVEY_JWT_EXPIRES_IN',
@@ -20,7 +29,7 @@ export class AuthService {
     const signOptions: SignOptions = {
       expiresIn,
     };
-    return sign({ _id, username }, secret, signOptions);
+    return sign({ _id, username, role }, secret, signOptions);
   }
 
   // 验证token

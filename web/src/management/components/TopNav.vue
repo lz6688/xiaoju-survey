@@ -2,32 +2,59 @@
   <div class="top-nav">
     <div class="left">
       <img class="logo-img" src="/imgs/Logo.webp" alt="logo" />
-      <el-menu router default-active-index="survey" class="el-menu-demo" mode="horizontal">
+      <el-menu :default-active="activeMenu" class="el-menu-demo" mode="horizontal">
         <el-menu-item index="survey">
-          <router-link :to="{ name: 'survey' }">问卷列表</router-link>
+          <router-link :to="{ name: surveyRouteName }">问卷列表</router-link>
         </el-menu-item>
-        <el-menu-item index="download">
+        <el-menu-item v-if="isAdmin" index="agents">
+          <router-link :to="{ name: 'agents' }">代理管理</router-link>
+        </el-menu-item>
+        <el-menu-item v-if="isAdmin" index="download">
           <router-link :to="{ name: 'download' }">下载中心</router-link>
         </el-menu-item>
       </el-menu>
     </div>
     <div class="login-info">
+      <span class="role-tag">{{ userRoleText }}</span>
       您好，{{ userInfo?.username }}
       <img class="login-info-img" src="/imgs/avatar.webp" />
+      <span class="logout" @click="showPasswordDialog = true">修改密码</span>
       <span class="logout" @click="handleLogout">退出</span>
     </div>
   </div>
+  <ChangePasswordDialog
+    :visible="showPasswordDialog"
+    @close="showPasswordDialog = false"
+    @success="showPasswordDialog = false"
+  />
 </template>
 
 <script setup lang="ts">
 import { useUserStore } from '@/management/stores/user'
-import { computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import ChangePasswordDialog from './ChangePasswordDialog.vue'
 const router = useRouter()
+const route = useRoute()
 
 const userStore = useUserStore()
+const showPasswordDialog = ref(false)
 const userInfo = computed(() => {
   return userStore.userInfo
+})
+const userRoleText = computed(() => {
+  return userInfo.value?.role === 'admin' ? '管理员' : '代理'
+})
+const isAdmin = computed(() => userInfo.value?.role === 'admin')
+const surveyRouteName = computed(() => (isAdmin.value ? 'survey' : 'agentSurvey'))
+const activeMenu = computed(() => {
+  if (route.name === 'download') {
+    return 'download'
+  }
+  if (route.name === 'agents') {
+    return 'agents'
+  }
+  return 'survey'
 })
 
 const handleLogout = () => {
@@ -78,6 +105,11 @@ const handleLogout = () => {
 
     .logout {
       margin-left: 20px;
+    }
+
+    .role-tag {
+      margin-right: 10px;
+      color: #4a4c5b;
     }
   }
 

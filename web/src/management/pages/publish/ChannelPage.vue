@@ -47,6 +47,7 @@ import { computed, onMounted, toRef } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useEditStore } from '@/management/stores/edit'
 import { useChannelStore } from '@/management/stores/channel'
+import { useUserStore } from '@/management/stores/user'
 import { useRoute, useRouter } from 'vue-router'
 import { get as _get } from 'lodash-es'
 
@@ -67,12 +68,14 @@ const defaultConfig = {
 }
 const channelStore = useChannelStore()
 const editStore = useEditStore()
+const userStore = useUserStore()
 const { schema, init, setSurveyId } = editStore
 
 
 const { channelTotal } = storeToRefs(channelStore)
 const metaData = toRef(schema, 'metaData')
 const curStatus = computed(() => _get(metaData.value, 'curStatus.status', 'new'))
+const homeRouteName = computed(() => (userStore.userInfo?.role === 'admin' ? 'survey' : 'agentSurvey'))
 const mainChannel = computed(() => {
   let fullUrl = ''
 
@@ -93,7 +96,7 @@ onMounted(async () => {
   } catch (err: any) {
     ElMessage.error(err.message)
     setTimeout(() => {
-      router.replace({ name: 'survey' })
+      router.replace({ name: homeRouteName.value })
     }, 1000)
   }
   channelStore.getChannelList({

@@ -47,12 +47,20 @@ export class ChannelService {
     id,
     channel,
     operatorId,
+    ownerId,
   }: {
     id: string;
     channel: Partial<Channel>;
     operatorId: string;
+    ownerId?: string;
   }) {
-    return this.channelRepository.update(id, {
+    const where: Record<string, any> = {
+      _id: new ObjectId(id),
+    };
+    if (ownerId) {
+      where.ownerId = ownerId;
+    }
+    return this.channelRepository.update(where, {
       name: channel.name,
       operatorId,
       updatedAt: new Date(),
@@ -63,20 +71,25 @@ export class ChannelService {
     id,
     status,
     operatorId,
+    ownerId,
   }: {
     id: string;
     status: CHANNEL_STATUS;
     operatorId: string;
+    ownerId?: string;
   }) {
-    const channel = await this.channelRepository.findOne({
-      where: {
-        ownerId: operatorId,
-        _id: new ObjectId(id),
-        isDeleted: {
-          $ne: true,
-        },
+    const where: Record<string, any> = {
+      _id: new ObjectId(id),
+      isDeleted: {
+        $ne: true,
       },
-    });
+    };
+    if (ownerId) {
+      where.ownerId = ownerId;
+    } else {
+      where.ownerId = operatorId;
+    }
+    const channel = await this.channelRepository.findOne({ where });
     if (!channel) {
       throw new HttpException('渠道不存在', EXCEPTION_CODE.PARAMETER_ERROR);
     }
@@ -91,11 +104,15 @@ export class ChannelService {
     }
   }
 
-  async delete(id: string, { operatorId }) {
+  async delete(id: string, { operatorId, ownerId }) {
+    const where: Record<string, any> = {
+      _id: new ObjectId(id),
+    };
+    if (ownerId) {
+      where.ownerId = ownerId;
+    }
     const workspaceRes = await this.channelRepository.updateOne(
-      {
-        _id: new ObjectId(id),
-      },
+      where,
       {
         $set: {
           isDeleted: true,
@@ -126,14 +143,18 @@ export class ChannelService {
   }
 
   // 问卷下的所有渠道
-  async findAllBySurveyId(surveyId: string) {
-    return await this.channelRepository.find({
-      where: {
-        surveyId,
-        isDeleted: {
-          $ne: true,
-        },
+  async findAllBySurveyId(surveyId: string, ownerId?: string) {
+    const where: Record<string, any> = {
+      surveyId,
+      isDeleted: {
+        $ne: true,
       },
+    };
+    if (ownerId) {
+      where.ownerId = ownerId;
+    }
+    return await this.channelRepository.find({
+      where,
       order: {
         _id: -1,
       },

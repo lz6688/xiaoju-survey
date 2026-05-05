@@ -12,6 +12,7 @@ import { SurveyMeta } from 'src/models/surveyMeta.entity';
 import { WorkspaceMember } from 'src/models/workspaceMember.entity';
 import { Collaborator } from 'src/models/collaborator.entity';
 import { SURVEY_PERMISSION } from 'src/enums/surveyPermission';
+import { USER_ROLE } from 'src/enums/user';
 
 describe('SurveyGuard', () => {
   let guard: SurveyGuard;
@@ -184,12 +185,100 @@ describe('SurveyGuard', () => {
     expect(result).toBe(true);
   });
 
-  function createMockExecutionContext(): ExecutionContext {
+  it('should allow admin users to access any survey', async () => {
+    const context = createMockExecutionContext({
+      user: {
+        username: 'admin',
+        _id: 'adminUserId',
+        role: USER_ROLE.ADMIN,
+      },
+    });
+    jest
+      .spyOn(reflector, 'get')
+      .mockImplementation((key: string) =>
+        key === 'surveyId' ? 'params.surveyId' : undefined,
+      );
+    jest.spyOn(surveyMetaService, 'getSurveyById').mockResolvedValue({
+      owner: 'anotherUser',
+      ownerId: 'anotherUserId',
+      workspaceId: null,
+    } as SurveyMeta);
+
+    const result = await guard.canActivate(context);
+
+    expect(result).toBe(true);
+    expect(collaboratorService.getCollaborator).not.toHaveBeenCalled();
+  });
+
+  it('should allow assigned agents when handler enables agent access', async () => {
+    const context = createMockExecutionContext({
+      user: {
+        username: 'agent',
+        _id: 'agentUserId',
+        role: USER_ROLE.AGENT,
+      },
+    });
+    jest
+      .spyOn(reflector, 'get')
+      .mockImplementation((key: string) => {
+        if (key === 'surveyId') {
+          return 'params.surveyId';
+        }
+        if (key === 'agentAccess') {
+          return true;
+        }
+        return undefined;
+      });
+    jest.spyOn(surveyMetaService, 'getSurveyById').mockResolvedValue({
+      owner: 'anotherUser',
+      ownerId: 'anotherUserId',
+      workspaceId: null,
+      assignedAgentIds: ['agentUserId'],
+    } as unknown as SurveyMeta);
+
+    const result = await guard.canActivate(context);
+
+    expect(result).toBe(true);
+  });
+
+  it('should deny assigned agents when handler does not enable agent access', async () => {
+    const context = createMockExecutionContext({
+      user: {
+        username: 'agent',
+        _id: 'agentUserId',
+        role: USER_ROLE.AGENT,
+      },
+    });
+    jest
+      .spyOn(reflector, 'get')
+      .mockImplementation((key: string) => {
+        if (key === 'surveyId') {
+          return 'params.surveyId';
+        }
+        if (key === 'agentAccess') {
+          return false;
+        }
+        return undefined;
+      });
+    jest.spyOn(surveyMetaService, 'getSurveyById').mockResolvedValue({
+      owner: 'anotherUser',
+      ownerId: 'anotherUserId',
+      workspaceId: null,
+      assignedAgentIds: ['agentUserId'],
+    } as unknown as SurveyMeta);
+
+    await expect(guard.canActivate(context)).rejects.toThrow(
+      NoPermissionException,
+    );
+  });
+
+  function createMockExecutionContext(overrides: any = {}): ExecutionContext {
     return {
       switchToHttp: jest.fn().mockReturnValue({
         getRequest: jest.fn().mockReturnValue({
           user: { username: 'testUser', _id: 'testUserId' },
           params: { surveyId: 'surveyId' },
+          ...overrides,
         }),
       }),
       getHandler: jest.fn(),

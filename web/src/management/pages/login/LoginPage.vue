@@ -45,15 +45,7 @@
 
         <el-form-item class="button-group">
           <el-button
-            :loading="pending.register"
-            class="button register-button"
-            @click="submitForm('register')"
-          >
-            注册
-          </el-button>
-          <el-button
             :loading="pending.login"
-            size="small"
             type="primary"
             class="button"
             @click="submitForm('login')"
@@ -75,7 +67,7 @@ import 'element-plus/theme-chalk/src/message.scss'
 
 import { debounce } from 'lodash-es'
 
-import { getPasswordStrength, login, register } from '@/management/api/auth'
+import { getPasswordStrength, login } from '@/management/api/auth'
 import { refreshCaptcha as refreshCaptchaApi } from '@/management/api/captcha'
 import { CODE_MAP } from '@/management/api/base'
 import { useUserStore } from '@/management/stores/user'
@@ -92,7 +84,6 @@ interface FormData {
 
 interface Pending {
   login: boolean
-  register: boolean
 }
 
 const formData = reactive<FormData>({
@@ -177,8 +168,7 @@ onMounted(() => {
 })
 
 const pending = reactive<Pending>({
-  login: false,
-  register: false
+  login: false
 })
 
 const captchaImgData = ref<string>('')
@@ -186,17 +176,13 @@ const formDataRef = ref<any>(null)
 const passwordStrength = ref<'Strong' | 'Medium' | 'Weak'>()
 
 // 提交表单
-const submitForm = (type: 'login' | 'register') => {
+const submitForm = (type: 'login') => {
   formDataRef.value.validate(async (valid: boolean) => {
     if (valid) {
       try {
-        const submitTypes = {
-          login,
-          register
-        }
         pending[type] = true
         // 发送请求
-        const res: any = await submitTypes[type]({
+        const res: any = await login({
           username: formData.name,
           password: formData.password,
           captcha: formData.captcha,
@@ -210,10 +196,11 @@ const submitForm = (type: 'login' | 'register') => {
         const userStore = useUserStore()
         userStore.login({
           username: res.data.username,
-          token: res.data.token
+          token: res.data.token,
+          role: res.data.role
         })
         let redirect: any = {
-          name: 'survey'
+          name: res.data.role === 'admin' ? 'survey' : 'agentSurvey'
         }
         if (route.query.redirect) {
           // 解码url
@@ -287,14 +274,9 @@ const refreshCaptcha = async () => {
     }
 
     .button {
-      width: 204px;
+      width: 100%;
       height: 40px;
       font-size: 14px;
-    }
-
-    .register-button {
-      border-color: #faa600;
-      color: #faa600;
     }
   }
 

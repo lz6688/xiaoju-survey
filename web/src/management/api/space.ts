@@ -36,6 +36,23 @@ export const getUserList = (username: string) => {
   })
 }
 
+export const getAgentList = (username: string) => {
+  return axios.get(`/user/getAgentList`, {
+    params: {
+      username,
+      pageIndex: 1,
+      pageSize: 100
+    }
+  })
+}
+
+export const createAgent = ({ username, password }: any) => {
+  return axios.post('/user/createAgent', {
+    username,
+    password
+  })
+}
+
 // 获取协作权限下拉框枚举
 export const getPermissionList = () => {
   return axios.get('collaborator/getPermissionList')

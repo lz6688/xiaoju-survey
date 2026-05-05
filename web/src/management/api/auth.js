@@ -24,3 +24,10 @@ export const getPasswordStrength = (password) => {
 export const checkIsTokenValid = () => {
   return axios.get('/auth/verifyToken')
 }
+
+export const changePassword = ({ oldPassword, newPassword }) => {
+  return axios.post('/auth/changePassword', {
+    oldPassword,
+    newPassword
+  })
+}

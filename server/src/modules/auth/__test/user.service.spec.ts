@@ -6,6 +6,7 @@ import { User } from 'src/models/user.entity';
 import { HttpException } from 'src/exceptions/httpException';
 import { hash256 } from 'src/utils/hash256';
 import { ObjectId } from 'mongodb';
+import { USER_ROLE } from 'src/enums/user';
 
 describe('UserService', () => {
   let service: UserService;
@@ -22,6 +23,7 @@ describe('UserService', () => {
             save: jest.fn(),
             findOne: jest.fn(),
             find: jest.fn(),
+            updateOne: jest.fn(),
           },
         },
       ],
@@ -61,9 +63,127 @@ describe('UserService', () => {
     expect(createSpy).toHaveBeenCalledWith({
       username: userInfo.username,
       password: expect.any(String),
+      role: USER_ROLE.AGENT,
     });
     expect(saveSpy).toHaveBeenCalled();
     expect(user).toEqual(userInfo);
+  });
+
+  it('should create an agent user', async () => {
+    const userInfo = {
+      username: 'agentUser',
+      password: 'testPassword',
+    };
+    const createdUser = {
+      ...userInfo,
+      password: hash256(userInfo.password),
+      role: USER_ROLE.AGENT,
+    } as unknown as User;
+
+    jest.spyOn(userRepository, 'findOne').mockResolvedValue(null);
+    jest.spyOn(userRepository, 'create').mockReturnValue(createdUser);
+    jest.spyOn(userRepository, 'save').mockResolvedValue(createdUser);
+
+    const user = await service.createAgent(userInfo);
+
+    expect(userRepository.create).toHaveBeenCalledWith({
+      username: userInfo.username,
+      password: hash256(userInfo.password),
+      role: USER_ROLE.AGENT,
+    });
+    expect(user).toEqual(createdUser);
+  });
+
+  it('should ensure default admin user when admin does not exist', async () => {
+    const adminUser = {
+      username: 'admin',
+      password: hash256('admin'),
+      role: USER_ROLE.ADMIN,
+    } as unknown as User;
+
+    jest.spyOn(userRepository, 'findOne').mockResolvedValue(null);
+    jest.spyOn(userRepository, 'create').mockReturnValue(adminUser);
+    jest.spyOn(userRepository, 'save').mockResolvedValue(adminUser);
+
+    await service.ensureDefaultAdmin();
+
+    expect(userRepository.findOne).toHaveBeenCalledWith({
+      where: { username: 'admin' },
+    });
+    expect(userRepository.create).toHaveBeenCalledWith({
+      username: 'admin',
+      password: hash256('admin'),
+      role: USER_ROLE.ADMIN,
+    });
+    expect(userRepository.save).toHaveBeenCalledWith(adminUser);
+  });
+
+  it('should update admin role when default admin already exists without admin role', async () => {
+    const adminUser = {
+      _id: new ObjectId(),
+      username: 'admin',
+      password: hash256('admin'),
+      role: USER_ROLE.AGENT,
+    } as unknown as User;
+
+    jest.spyOn(userRepository, 'findOne').mockResolvedValue(adminUser);
+    const saveSpy = jest
+      .spyOn(userRepository, 'save')
+      .mockResolvedValue({ ...adminUser, role: USER_ROLE.ADMIN } as User);
+
+    await service.ensureDefaultAdmin();
+
+    expect(saveSpy).toHaveBeenCalledWith({
+      ...adminUser,
+      role: USER_ROLE.ADMIN,
+    });
+  });
+
+  it('should change password when old password is correct', async () => {
+    const userId = new ObjectId().toString();
+    const user = {
+      _id: new ObjectId(userId),
+      username: 'agentUser',
+      password: hash256('oldPass123'),
+      role: USER_ROLE.AGENT,
+    } as unknown as User;
+
+    jest.spyOn(userRepository, 'findOne').mockResolvedValue(user);
+    jest.spyOn(userRepository, 'save').mockResolvedValue({
+      ...user,
+      password: hash256('newPass123'),
+    } as User);
+
+    await service.changePassword({
+      userId,
+      oldPassword: 'oldPass123',
+      newPassword: 'newPass123',
+    });
+
+    expect(userRepository.save).toHaveBeenCalledWith({
+      ...user,
+      password: hash256('newPass123'),
+    });
+  });
+
+  it('should reject password change when old password is wrong', async () => {
+    const userId = new ObjectId().toString();
+    const user = {
+      _id: new ObjectId(userId),
+      username: 'agentUser',
+      password: hash256('oldPass123'),
+      role: USER_ROLE.AGENT,
+    } as unknown as User;
+
+    jest.spyOn(userRepository, 'findOne').mockResolvedValue(user);
+
+    await expect(
+      service.changePassword({
+        userId,
+        oldPassword: 'wrongPass',
+        newPassword: 'newPass123',
+      }),
+    ).rejects.toThrow(HttpException);
   });
 
   it('should throw when trying to create an existing user', async () => {
@@ -104,7 +224,11 @@ describe('UserService', () => {
         password: hashedPassword,
       },
     });
-    expect(user).toEqual({ ...userInfo, password: hashedPassword });
+    expect(user).toEqual({
+      ...userInfo,
+      password: hashedPassword,
+      role: USER_ROLE.AGENT,
+    });
   });
 
   it('should return null when user is not found by credentials', async () => {
@@ -227,6 +351,42 @@ describe('UserService', () => {
       skip: 0,
       take: 10,
       select: ['_id', 'username', 'createdAt'],
+    });
+    expect(result).toEqual(userList);
+  });
+
+  it('should return a list of agent users by username', async () => {
+    const username = 'agent';
+    const userList = [
+      {
+        _id: new ObjectId(),
+        username: 'agentUser1',
+        role: USER_ROLE.AGENT,
+        createdAt: new Date(),
+      },
+    ];
+
+    jest
+      .spyOn(userRepository, 'find')
+      .mockResolvedValue(userList as unknown as User[]);
+
+    const result = await service.getAgentList({
+      username,
+      skip: 0,
+      take: 10,
+    });
+
+    expect(userRepository.find).toHaveBeenCalledWith({
+      where: {
+        username: new RegExp(username),
+        role: USER_ROLE.AGENT,
+      },
+      skip: 0,
+      take: 10,
+      select: ['_id', 'username', 'createdAt', 'role'],
+      order: {
+        createdAt: -1,
+      },
     });
     expect(result).toEqual(userList);
   });

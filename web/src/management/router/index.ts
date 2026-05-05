@@ -27,7 +27,18 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../pages/list/index.vue'),
     meta: {
       needLogin: true,
+      allowRoles: ['admin'],
       title: '问卷列表'
+    }
+  },
+  {
+    path: '/agent/survey',
+    name: 'agentSurvey',
+    component: () => import('../pages/list/index.vue'),
+    meta: {
+      needLogin: true,
+      allowRoles: ['agent'],
+      title: '我的问卷'
     }
   },
   {
@@ -35,13 +46,15 @@ const routes: RouteRecordRaw[] = [
     name: 'download',
     component: () => import('../pages/download/DownloadPage.vue'),
     meta: {
-      needLogin: true
+      needLogin: true,
+      allowRoles: ['admin']
     }
   },
   {
     path: '/survey/:id/edit',
     meta: {
       needLogin: true,
+      allowRoles: ['admin'],
       permissions: [SurveyPermissions.SurveyManage]
     },
     name: 'QuestionEdit',
@@ -117,6 +130,7 @@ const routes: RouteRecordRaw[] = [
     },
     meta: {
       needLogin: true,
+      allowRoles: ['admin', 'agent'],
       permissions: [SurveyPermissions.DataManage]
     },
     component: () => import('../pages/analysis/AnalysisPage.vue'),
@@ -146,6 +160,7 @@ const routes: RouteRecordRaw[] = [
     name: 'publish',
     meta: {
       needLogin: true,
+      allowRoles: ['admin', 'agent'],
       permissions: [SurveyPermissions.SurveyManage]
     },
     component: () => import('../pages/publish/PublishPage.vue')
@@ -155,6 +170,7 @@ const routes: RouteRecordRaw[] = [
     name: 'channel',
     meta: {
       needLogin: true,
+      allowRoles: ['admin', 'agent'],
       permissions: [SurveyPermissions.SurveyManage]
     },
     component: () => import('../pages/publish/ChannelPage.vue')
@@ -164,9 +180,20 @@ const routes: RouteRecordRaw[] = [
     name: 'create',
     meta: {
       needLogin: true,
+      allowRoles: ['admin'],
       title: '创建问卷'
     },
     component: () => import('../pages/create/CreatePage.vue')
+  },
+  {
+    path: '/agents',
+    name: 'agents',
+    meta: {
+      needLogin: true,
+      allowRoles: ['admin'],
+      title: '代理管理'
+    },
+    component: () => import('../pages/agent/AgentPage.vue')
   },
   {
     path: '/login',
@@ -212,6 +239,14 @@ async function handleLoginGuard(
 ) {
   const userStore = useUserStore()
   if (userStore?.hasLogin) {
+    const role = userStore.userInfo?.role || 'agent'
+    const allowRoles = to.meta.allowRoles as string[] | undefined
+    if (allowRoles && !allowRoles.includes(role)) {
+      next({
+        name: role === 'admin' ? 'survey' : 'agentSurvey'
+      })
+      return
+    }
     await handlePermissionsGuard(to, from, next)
   } else {
     next({
@@ -228,11 +263,15 @@ async function handlePermissionsGuard(
   from: RouteLocationNormalized,
   next: NavigationGuardNext
 ) {
+  const userStore = useUserStore()
+  const role = userStore.userInfo?.role || 'agent'
   const editStore = useEditStore()
   const currSurveyId = to?.params?.id || ''
   const prevSurveyId = from?.params?.id || ''
   // 如果跳转页面不存在surveyId 或者不需要页面权限，则直接跳转
   if (!to.meta.permissions || !currSurveyId) {
+    next()
+  } else if (role === 'admin' || role === 'agent') {
     next()
   } else {
     // 如果跳转编辑页面，且跳转页面和上一页的surveyId不同，判断是否有对应页面权限
@@ -242,7 +281,7 @@ async function handlePermissionsGuard(
         next()
       } else {
         ElMessage.warning('您没有该问卷的相关协作权限')
-        next({ name: 'survey' })
+        next({ name: role === 'admin' ? 'survey' : 'agentSurvey' })
       }
     } else {
       next()

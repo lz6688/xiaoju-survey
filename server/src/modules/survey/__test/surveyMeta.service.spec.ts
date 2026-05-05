@@ -7,6 +7,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { HttpException } from 'src/exceptions/httpException';
 import { RECORD_STATUS, RECORD_SUB_STATUS } from 'src/enums';
 import { ObjectId } from 'mongodb';
+import { USER_ROLE } from 'src/enums/user';
 
 describe('SurveyMetaService', () => {
   let service: SurveyMetaService;
@@ -88,6 +89,7 @@ describe('SurveyMetaService', () => {
         createFrom: params.createFrom,
         workspaceId: params.workspaceId,
         groupId: null,
+        assignedAgentIds: [],
       });
       expect(surveyRepository.save).toHaveBeenCalledWith(newSurvey);
       expect(result).toEqual(newSurvey);
@@ -270,6 +272,83 @@ describe('SurveyMetaService', () => {
 
       expect(result).toEqual({ data: mockData, count: mockCount });
       expect(surveyRepository.findAndCount).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not restrict admin survey list by owner id', async () => {
+      jest.spyOn(surveyRepository, 'findAndCount').mockResolvedValue([[], 0]);
+
+      await service.getSurveyMetaList({
+        pageNum: 1,
+        pageSize: 10,
+        userId: 'adminUserId',
+        username: 'admin',
+        role: USER_ROLE.ADMIN,
+        filter: {},
+        order: {},
+      });
+
+      expect(surveyRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.not.objectContaining({
+            ownerId: 'adminUserId',
+          }),
+        }),
+      );
+    });
+
+    it('should restrict agent survey list to assigned survey ids', async () => {
+      jest.spyOn(surveyRepository, 'findAndCount').mockResolvedValue([[], 0]);
+
+      await service.getSurveyMetaList({
+        pageNum: 1,
+        pageSize: 10,
+        userId: 'agentUserId',
+        username: 'agent',
+        role: USER_ROLE.AGENT,
+        filter: {},
+        order: {},
+      });
+
+      expect(surveyRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            assignedAgentIds: 'agentUserId',
+          }),
+        }),
+      );
+    });
+  });
+
+  describe('assignAgents', () => {
+    it('should assign agent ids to a survey', async () => {
+      const surveyId = new ObjectId().toString();
+      const agentIds = [new ObjectId().toString(), new ObjectId().toString()];
+
+      jest.spyOn(surveyRepository, 'updateOne').mockResolvedValue({
+        matchedCount: 1,
+        modifiedCount: 1,
+        acknowledged: true,
+      });
+
+      const result = await service.assignAgents({
+        surveyId,
+        agentIds,
+        operator: 'admin',
+        operatorId: 'adminUserId',
+      });
+
+      expect(surveyRepository.updateOne).toHaveBeenCalledWith(
+        { _id: new ObjectId(surveyId) },
+        {
+          $set: {
+            assignedAgentIds: agentIds,
+            operator: 'admin',
+            operatorId: 'adminUserId',
+            updatedAt: expect.any(Date),
+          },
+        },
+      );
+      expect(result.modifiedCount).toBe(1);
     });
   });
 

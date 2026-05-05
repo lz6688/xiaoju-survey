@@ -6,6 +6,7 @@ import { HttpException } from 'src/exceptions/httpException';
 import { EXCEPTION_CODE } from 'src/enums/exceptionCode';
 import { hash256 } from 'src/utils/hash256';
 import { ObjectId } from 'mongodb';
+import { USER_ROLE } from 'src/enums/user';
 
 @Injectable()
 export class UserService {
@@ -14,9 +15,17 @@ export class UserService {
     private readonly userRepository: MongoRepository<User>,
   ) {}
 
+  private normalizeRole<T extends User | null | undefined>(user: T): T {
+    if (user && !user.role) {
+      user.role = USER_ROLE.AGENT;
+    }
+    return user;
+  }
+
   async createUser(userInfo: {
     username: string;
     password: string;
+    role?: USER_ROLE;
   }): Promise<User> {
     const existingUser = await this.userRepository.findOne({
       where: { username: userInfo.username },
@@ -29,9 +38,44 @@ export class UserService {
     const newUser = this.userRepository.create({
       username: userInfo.username,
       password: hash256(userInfo.password),
+      role: userInfo.role || USER_ROLE.AGENT,
     });
 
     return this.userRepository.save(newUser);
+  }
+
+  async createAgent(userInfo: {
+    username: string;
+    password: string;
+  }): Promise<User> {
+    return this.createUser({
+      ...userInfo,
+      role: USER_ROLE.AGENT,
+    });
+  }
+
+  async ensureDefaultAdmin() {
+    const adminUser = this.normalizeRole(
+      await this.userRepository.findOne({
+        where: { username: 'admin' },
+      }),
+    );
+
+    if (!adminUser) {
+      const newUser = this.userRepository.create({
+        username: 'admin',
+        password: hash256('admin'),
+        role: USER_ROLE.ADMIN,
+      });
+      return this.userRepository.save(newUser);
+    }
+
+    if (adminUser.role !== USER_ROLE.ADMIN) {
+      adminUser.role = USER_ROLE.ADMIN;
+      return this.userRepository.save(adminUser);
+    }
+
+    return adminUser;
   }
 
   async getUser(userInfo: {
@@ -45,7 +89,7 @@ export class UserService {
       },
     });
 
-    return user;
+    return this.normalizeRole(user);
   }
 
   async getUserByUsername(username) {
@@ -55,7 +99,7 @@ export class UserService {
       },
     });
 
-    return user;
+    return this.normalizeRole(user);
   }
 
   async getUserById(id: string) {
@@ -65,7 +109,7 @@ export class UserService {
       },
     });
 
-    return user;
+    return this.normalizeRole(user);
   }
 
   async getUserListByUsername({ username, skip, take }) {
@@ -80,6 +124,22 @@ export class UserService {
     return list;
   }
 
+  async getAgentList({ username, skip, take }) {
+    const list = await this.userRepository.find({
+      where: {
+        username: new RegExp(username),
+        role: USER_ROLE.AGENT,
+      },
+      skip,
+      take,
+      select: ['_id', 'username', 'createdAt', 'role'],
+      order: {
+        createdAt: -1,
+      },
+    });
+    return list.map((item) => this.normalizeRole(item));
+  }
+
   async getUserListByIds({ idList }) {
     const list = await this.userRepository.find({
       where: {
@@ -90,5 +150,31 @@ export class UserService {
       select: ['_id', 'username', 'createdAt'],
     });
     return list;
+  }
+
+  async changePassword({
+    userId,
+    oldPassword,
+    newPassword,
+  }: {
+    userId: string;
+    oldPassword: string;
+    newPassword: string;
+  }) {
+    const user = await this.userRepository.findOne({
+      where: {
+        _id: new ObjectId(userId),
+      },
+    });
+
+    if (!user || user.password !== hash256(oldPassword)) {
+      throw new HttpException(
+        '用户名或密码错误',
+        EXCEPTION_CODE.USER_PASSWORD_WRONG,
+      );
+    }
+
+    user.password = hash256(newPassword);
+    await this.userRepository.save(user);
   }
 }

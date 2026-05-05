@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, OnModuleInit } from '@nestjs/common';
 import { UserService } from './services/user.service';
 import { AuthService } from './services/auth.service';
 import { CaptchaService } from './services/captcha.service';
@@ -18,4 +18,10 @@ import { ConfigModule } from '@nestjs/config';
   providers: [UserService, AuthService, CaptchaService],
   exports: [UserService, AuthService],
 })
-export class AuthModule {}
+export class AuthModule implements OnModuleInit {
+  constructor(private readonly userService: UserService) {}
+
+  async onModuleInit() {
+    await this.userService.ensureDefaultAdmin();
+  }
+}

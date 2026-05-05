@@ -29,13 +29,16 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { computed } from 'vue'
 import { useEditStore } from '@/management/stores/edit'
+import { useUserStore } from '@/management/stores/user'
 import { useRoute } from 'vue-router'
 const route = useRoute()
 import LogoIcon from './LogoIcon.vue'
 import { SurveyPermissions } from '@/management/utils/workSpace'
 const editStore = useEditStore()
+const userStore = useUserStore()
+const isAgent = computed(() => userStore.userInfo?.role === 'agent')
 
 const tabArr = [
   {
@@ -60,23 +63,21 @@ const tabArr = [
     }
   }
 ]
-const tabs = ref([])
-watch(
-  () => editStore.cooperPermissions,
-  (newVal) => {
-    tabs.value = []
-    // 如果有问卷管理权限，则加入问卷编辑和投放菜单
-    if (newVal.includes(SurveyPermissions.SurveyManage)) {
-      tabs.value.push(tabArr[0])
-      tabs.value.push(tabArr[1])
-    }
-    // 如果有数据分析权限，则加入数据分析菜单
-    if (newVal.includes(SurveyPermissions.DataManage)) {
-      tabs.value.push(tabArr[2])
-    }
-  },
-  { immediate: true }
-)
+const tabs = computed(() => {
+  if (isAgent.value) {
+    return [tabArr[1], tabArr[2]]
+  }
+
+  const result = []
+  const permissions = editStore.cooperPermissions
+  if (permissions.includes(SurveyPermissions.SurveyManage)) {
+    result.push(tabArr[0], tabArr[1])
+  }
+  if (permissions.includes(SurveyPermissions.DataManage)) {
+    result.push(tabArr[2])
+  }
+  return result
+})
 </script>
 <style lang="scss" scoped>
 .nav {

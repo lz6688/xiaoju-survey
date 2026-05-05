@@ -6,6 +6,7 @@ import { Authentication } from 'src/guards/authentication.guard';
 import { HttpException } from 'src/exceptions/httpException';
 import { EXCEPTION_CODE } from 'src/enums/exceptionCode';
 import { User } from 'src/models/user.entity';
+import { USER_ROLE } from 'src/enums/user';
 
 describe('UserController', () => {
   let userController: UserController;
@@ -19,6 +20,8 @@ describe('UserController', () => {
           provide: UserService,
           useValue: {
             getUserListByUsername: jest.fn(),
+            getAgentList: jest.fn(),
+            createAgent: jest.fn(),
           },
         },
       ],
@@ -77,6 +80,94 @@ describe('UserController', () => {
       await expect(userController.getUserList(queryInfo)).rejects.toThrow(
         new HttpException('参数有误', EXCEPTION_CODE.PARAMETER_ERROR),
       );
+    });
+  });
+
+  describe('getUserInfo', () => {
+    it('should return current user info with role', async () => {
+      const userId = '60c72b2f9b1e8a5f4b123456';
+      const result = await userController.getUserInfo({
+        user: {
+          _id: userId,
+          username: 'agentUser',
+          role: USER_ROLE.AGENT,
+        },
+      });
+
+      expect(result).toEqual({
+        code: 200,
+        data: {
+          userId,
+          username: 'agentUser',
+          role: USER_ROLE.AGENT,
+        },
+      });
+    });
+  });
+
+  describe('agent management', () => {
+    it('should create an agent account', async () => {
+      const agentId = '60c72b2f9b1e8a5f4b123456';
+      jest.spyOn(userService, 'createAgent').mockResolvedValue({
+        _id: agentId,
+        username: 'agentUser',
+        role: USER_ROLE.AGENT,
+      } as unknown as User);
+
+      const result = await userController.createAgent({
+        username: 'agentUser',
+        password: 'agent123',
+      });
+
+      expect(userService.createAgent).toHaveBeenCalledWith({
+        username: 'agentUser',
+        password: 'agent123',
+      });
+      expect(result).toEqual({
+        code: 200,
+        data: {
+          userId: agentId,
+          username: 'agentUser',
+          role: USER_ROLE.AGENT,
+        },
+      });
+    });
+
+    it('should return agent account list', async () => {
+      const agentId = '60c72b2f9b1e8a5f4b123456';
+      const queryInfo: GetUserListDto = {
+        username: 'agent',
+        pageIndex: 1,
+        pageSize: 10,
+      };
+      GetUserListDto.validate = jest
+        .fn()
+        .mockReturnValue({ value: queryInfo, error: null });
+      jest.spyOn(userService, 'getAgentList').mockResolvedValue([
+        {
+          _id: agentId,
+          username: 'agentUser',
+          role: USER_ROLE.AGENT,
+        } as unknown as User,
+      ]);
+
+      const result = await userController.getAgentList(queryInfo);
+
+      expect(userService.getAgentList).toHaveBeenCalledWith({
+        username: 'agent',
+        skip: 0,
+        take: 10,
+      });
+      expect(result).toEqual({
+        code: 200,
+        data: [
+          {
+            userId: agentId,
+            username: 'agentUser',
+            role: USER_ROLE.AGENT,
+          },
+        ],
+      });
     });
   });
 });

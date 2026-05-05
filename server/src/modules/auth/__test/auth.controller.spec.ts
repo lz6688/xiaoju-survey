@@ -11,6 +11,7 @@ import { EXCEPTION_CODE } from 'src/enums/exceptionCode';
 import { ObjectId } from 'mongodb';
 import { User } from 'src/models/user.entity';
 import { Captcha } from 'src/models/captcha.entity';
+import { USER_ROLE } from 'src/enums/user';
 
 jest.mock('../services/captcha.service');
 jest.mock('../services/auth.service');
@@ -51,7 +52,8 @@ describe('AuthController', () => {
         Promise.resolve({
           username: 'testUser',
           _id: new ObjectId(),
-        } as User),
+          role: USER_ROLE.AGENT,
+        } as unknown as User),
       );
       jest.spyOn(authService, 'generateToken').mockResolvedValue('testToken');
 
@@ -62,6 +64,7 @@ describe('AuthController', () => {
         data: {
           token: 'testToken',
           username: 'testUser',
+          role: USER_ROLE.AGENT,
         },
       });
     });
@@ -117,14 +120,16 @@ describe('AuthController', () => {
         Promise.resolve({
           username: 'testUser',
           _id: new ObjectId(),
-        } as User),
+          role: USER_ROLE.AGENT,
+        } as unknown as User),
       );
 
       jest.spyOn(userService, 'getUserByUsername').mockResolvedValue(
         Promise.resolve({
           username: 'testUser',
           _id: new ObjectId(),
-        } as User),
+          role: USER_ROLE.AGENT,
+        } as unknown as User),
       );
 
       jest.spyOn(authService, 'generateToken').mockResolvedValue('testToken');
@@ -136,6 +141,7 @@ describe('AuthController', () => {
         data: {
           token: 'testToken',
           username: 'testUser',
+          role: USER_ROLE.AGENT,
         },
       });
     });
@@ -243,6 +249,32 @@ describe('AuthController', () => {
         code: 200,
         data: 'Weak',
       });
+    });
+  });
+
+  describe('change password', () => {
+    it('should change password for current user', async () => {
+      jest.spyOn(userService, 'changePassword').mockResolvedValue(undefined);
+      const req = {
+        user: {
+          _id: new ObjectId('60c72b2f9b1e8a5f4b123456'),
+        },
+      };
+
+      const result = await controller.changePassword(
+        {
+          oldPassword: 'oldPass123',
+          newPassword: 'newPass123',
+        },
+        req,
+      );
+
+      expect(userService.changePassword).toHaveBeenCalledWith({
+        userId: '60c72b2f9b1e8a5f4b123456',
+        oldPassword: 'oldPass123',
+        newPassword: 'newPass123',
+      });
+      expect(result).toEqual({ code: 200 });
     });
   });
 });

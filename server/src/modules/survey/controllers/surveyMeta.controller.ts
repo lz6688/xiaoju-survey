@@ -29,6 +29,7 @@ import { PERMISSION as WORKSPACE_PERMISSION } from 'src/enums/workspace';
 import { GetSurveyListDto } from '../dto/getSurveyMetaList.dto';
 import { CollaboratorService } from '../services/collaborator.service';
 import { GROUP_STATE } from 'src/enums/surveyGroup';
+import { USER_ROLE } from 'src/enums/user';
 
 @ApiTags('survey')
 @Controller('/api/survey')
@@ -137,6 +138,7 @@ export class SurveyMetaController {
       pageSize: pageSize,
       userId,
       username,
+      role: req.user.role,
       filter,
       order,
       workspaceId,
@@ -174,6 +176,42 @@ export class SurveyMetaController {
         count: data.count,
         data: dataList,
       },
+    };
+  }
+
+  @UseGuards(Authentication)
+  @Post('/assignAgents')
+  @HttpCode(200)
+  async assignAgents(
+    @Body()
+    reqBody: {
+      surveyId: string;
+      agentIds: string[];
+    },
+    @Request() req,
+  ) {
+    const { value, error } = Joi.object({
+      surveyId: Joi.string().required(),
+      agentIds: Joi.array().items(Joi.string()).required(),
+    }).validate(reqBody);
+
+    if (error) {
+      throw new HttpException('参数有误', EXCEPTION_CODE.PARAMETER_ERROR);
+    }
+
+    if (req.user.role !== USER_ROLE.ADMIN) {
+      throw new HttpException('没有权限', EXCEPTION_CODE.NO_PERMISSION);
+    }
+
+    await this.surveyMetaService.assignAgents({
+      surveyId: value.surveyId,
+      agentIds: value.agentIds,
+      operator: req.user.username,
+      operatorId: req.user._id.toString(),
+    });
+
+    return {
+      code: 200,
     };
   }
 }

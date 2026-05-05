@@ -6,6 +6,7 @@ import { getUserInfo, setUserInfo, clearUserInfo } from '@/management/utils/stor
 type IUserInfo = {
   username: string
   token: string
+  role?: 'admin' | 'agent'
 }
 
 export const useUserStore = defineStore('user', () => {
@@ -19,7 +20,7 @@ export const useUserStore = defineStore('user', () => {
 
   const init = () => {
     const localData = getUserInfo()
-    if (localData) {
+    if (localData?.userInfo && localData?.loginTime) {
       try {
         const { userInfo: info, loginTime: time } = localData as any
         if (Date.now() - time > 7 * 3600000) {
@@ -39,7 +40,7 @@ export const useUserStore = defineStore('user', () => {
     loginTime.value = Date.now()
     setUserInfo({
       userInfo: data,
-      loginTime: loginTime
+      loginTime: loginTime.value
     })
   }
   const logout = () => {

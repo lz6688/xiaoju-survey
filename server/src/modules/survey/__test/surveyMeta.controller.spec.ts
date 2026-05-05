@@ -7,6 +7,7 @@ import { HttpException } from 'src/exceptions/httpException';
 import { EXCEPTION_CODE } from 'src/enums/exceptionCode';
 import { CollaboratorService } from '../services/collaborator.service';
 import { ObjectId } from 'mongodb';
+import { USER_ROLE } from 'src/enums/user';
 
 jest.mock('src/guards/authentication.guard');
 jest.mock('src/guards/survey.guard');
@@ -22,11 +23,12 @@ describe('SurveyMetaController', () => {
       providers: [
         {
           provide: SurveyMetaService,
-          useValue: {
-            editSurveyMeta: jest.fn().mockResolvedValue(undefined),
-            getSurveyMetaList: jest
-              .fn()
-              .mockResolvedValue({ count: 0, data: [] }),
+      useValue: {
+        editSurveyMeta: jest.fn().mockResolvedValue(undefined),
+        assignAgents: jest.fn().mockResolvedValue(undefined),
+        getSurveyMetaList: jest
+          .fn()
+          .mockResolvedValue({ count: 0, data: [] }),
           },
         },
         {
@@ -39,6 +41,7 @@ describe('SurveyMetaController', () => {
           provide: CollaboratorService,
           useValue: {
             getCollaboratorListByUserId: jest.fn().mockResolvedValue([]),
+            getManageListByUserId: jest.fn().mockResolvedValue([]),
           },
         },
         {
@@ -181,6 +184,7 @@ describe('SurveyMetaController', () => {
       surveyIdList: [],
       userId,
       workspaceId: undefined,
+      role: undefined,
     });
   });
 
@@ -220,7 +224,62 @@ describe('SurveyMetaController', () => {
       filter: { surveyType: 'normal', title: { $regex: 'hahah' } },
       order: { createdAt: -1 },
       workspaceId: undefined,
+      role: undefined,
     });
+  });
+
+  it('should pass admin role to survey meta list query', async () => {
+    const queryInfo = {
+      curPage: 1,
+      pageSize: 10,
+    };
+    const userId = new ObjectId().toString();
+    const req = {
+      user: {
+        username: 'admin',
+        _id: new ObjectId(userId),
+        role: USER_ROLE.ADMIN,
+      },
+    };
+
+    await controller.getList(queryInfo, req);
+
+    expect(surveyMetaService.getSurveyMetaList).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId,
+        username: 'admin',
+        role: USER_ROLE.ADMIN,
+      }),
+    );
+  });
+
+  it('should assign agents to a survey', async () => {
+    const surveyId = new ObjectId().toString();
+    const agentIds = [new ObjectId().toString()];
+    const adminId = new ObjectId().toString();
+    const req = {
+      user: {
+        username: 'admin',
+        _id: new ObjectId(adminId),
+        role: USER_ROLE.ADMIN,
+      },
+    };
+
+    const result = await controller.assignAgents(
+      {
+        surveyId,
+        agentIds,
+      },
+      req,
+    );
+
+    expect(surveyMetaService.assignAgents).toHaveBeenCalledWith({
+      surveyId,
+      agentIds,
+      operator: 'admin',
+      operatorId: adminId,
+    });
+    expect(result).toEqual({ code: 200 });
   });
 
   it('should handle Joi validation in getList', async () => {

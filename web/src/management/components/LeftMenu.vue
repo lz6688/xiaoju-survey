@@ -38,7 +38,7 @@ import LogoIcon from './LogoIcon.vue'
 import { SurveyPermissions } from '@/management/utils/workSpace'
 const editStore = useEditStore()
 const userStore = useUserStore()
-const isAgent = computed(() => userStore.userInfo?.role === 'agent')
+const isAdmin = computed(() => userStore.userInfo?.role === 'admin')
 
 const tabArr = [
   {
@@ -64,8 +64,8 @@ const tabArr = [
   }
 ]
 const tabs = computed(() => {
-  if (isAgent.value) {
-    return [tabArr[1], tabArr[2]]
+  if (isAdmin.value) {
+    return tabArr
   }
 
   const result = []

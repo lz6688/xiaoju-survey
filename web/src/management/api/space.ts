@@ -53,6 +53,19 @@ export const createAgent = ({ username, password }: any) => {
   })
 }
 
+export const updateAgentStatus = ({ userId, status }: { userId: string; status: 'active' | 'disabled' }) => {
+  return axios.post('/user/updateAgentStatus', {
+    userId,
+    status
+  })
+}
+
+export const deleteAgent = (userId: string) => {
+  return axios.post('/user/deleteAgent', {
+    userId
+  })
+}
+
 // 获取协作权限下拉框枚举
 export const getPermissionList = () => {
   return axios.get('collaborator/getPermissionList')

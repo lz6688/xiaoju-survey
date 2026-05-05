@@ -4,7 +4,6 @@ import { set as _set, isNumber as _isNumber } from 'lodash-es'
 import { QUESTION_TYPE } from '@/common/typeEnum'
 import { getQuestionByType } from '@/management/utils/index'
 
-import { SurveyPermissions } from '@/management/utils/workSpace'
 import { getCollaboratorPermissions } from '@/management/api/space'
 
 import useInitializeSchema from './composables/useInitializeSchema'
@@ -42,14 +41,15 @@ export const useEditStore = defineStore('edit', () => {
   }
 
   // 问卷协作权限
-  const cooperPermissions = ref(Object.values(SurveyPermissions))
+  const cooperPermissions = ref<string[]>([])
   const fetchCooperPermissions = async (id: string) => {
     const res: any = await getCollaboratorPermissions(id)
     if (res.code === CODE_MAP.SUCCESS) {
-      cooperPermissions.value = res.data.permissions
+      cooperPermissions.value = res.data.permissions || []
+      return cooperPermissions.value
     }
-
-    return res.data.permissions
+    cooperPermissions.value = []
+    return []
   }
 
   // 问卷题目列表

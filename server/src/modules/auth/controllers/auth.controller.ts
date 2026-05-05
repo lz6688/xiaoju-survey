@@ -18,6 +18,7 @@ import { create } from 'svg-captcha';
 import { ApiTags } from '@nestjs/swagger';
 import { Authentication } from 'src/guards/authentication.guard';
 import { getClientIp } from 'src/utils/requestMeta';
+import { USER_STATUS } from 'src/enums/user';
 
 const passwordReg = /^[a-zA-Z0-9!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]+$/;
 
@@ -135,6 +136,9 @@ export class AuthController {
         '用户名或密码错误',
         EXCEPTION_CODE.USER_PASSWORD_WRONG,
       );
+    }
+    if (user.status === USER_STATUS.DISABLED) {
+      throw new HttpException('账号已被封禁', EXCEPTION_CODE.NO_PERMISSION);
     }
     let token;
     try {

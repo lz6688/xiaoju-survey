@@ -54,7 +54,7 @@ const routes: RouteRecordRaw[] = [
     path: '/survey/:id/edit',
     meta: {
       needLogin: true,
-      allowRoles: ['admin'],
+      allowRoles: ['admin', 'agent'],
       permissions: [SurveyPermissions.EditManage]
     },
     name: 'QuestionEdit',
@@ -281,20 +281,18 @@ async function handlePermissionsGuard(
   // 如果跳转页面不存在surveyId 或者不需要页面权限，则直接跳转
   if (!to.meta.permissions || !currSurveyId) {
     next()
-  } else if (role === 'admin' || role === 'agent') {
+  } else if (role === 'admin') {
     next()
   } else {
-    // 如果跳转编辑页面，且跳转页面和上一页的surveyId不同，判断是否有对应页面权限
-    if (currSurveyId !== prevSurveyId) {
-      const cooperPermissions = await editStore.fetchCooperPermissions(currSurveyId as string)
-      if (hasRequiredPermissions(to.meta.permissions as string[], cooperPermissions)) {
-        next()
-      } else {
-        ElMessage.warning('您没有该问卷的相关授权权限')
-        next({ name: role === 'admin' ? 'survey' : 'agentSurvey' })
-      }
-    } else {
+    let cooperPermissions = editStore.cooperPermissions
+    if (currSurveyId !== prevSurveyId || cooperPermissions.length === 0) {
+      cooperPermissions = await editStore.fetchCooperPermissions(currSurveyId as string)
+    }
+    if (hasRequiredPermissions(to.meta.permissions as string[], cooperPermissions)) {
       next()
+    } else {
+      ElMessage.warning('您没有该问卷的相关授权权限')
+      next({ name: 'agentSurvey' })
     }
   }
 }

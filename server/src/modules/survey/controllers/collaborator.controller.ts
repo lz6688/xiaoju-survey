@@ -366,20 +366,6 @@ export class CollaboratorController {
       surveyId,
       userId,
     });
-    if (
-      !colloborator &&
-      user.role === USER_ROLE.AGENT &&
-      Array.isArray(surveyMeta.assignedAgentIds) &&
-      surveyMeta.assignedAgentIds.includes(userId)
-    ) {
-      return {
-        code: 200,
-        data: {
-          isOwner: false,
-          permissions: this.collaboratorService.getDefaultAgentPermissions(),
-        },
-      };
-    }
     return {
       code: 200,
       data: {

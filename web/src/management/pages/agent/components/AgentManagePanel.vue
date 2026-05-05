@@ -18,6 +18,13 @@
           代理
         </template>
       </el-table-column>
+      <el-table-column prop="status" label="状态" width="120">
+        <template #default="{ row }">
+          <el-tag :type="row.status === 'disabled' ? 'danger' : 'success'" effect="light">
+            {{ row.status === 'disabled' ? '已封号' : '正常' }}
+          </el-tag>
+        </template>
+      </el-table-column>
       <el-table-column prop="lastLoginAt" label="最近登录时间" min-width="180">
         <template #default="{ row }">
           {{ row.lastLoginAt || '--' }}
@@ -36,6 +43,28 @@
       <el-table-column prop="lastActiveIp" label="最近访问IP" min-width="140">
         <template #default="{ row }">
           {{ row.lastActiveIp || '--' }}
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" width="180" fixed="right">
+        <template #default="{ row }">
+          <div class="actions">
+            <el-button
+              link
+              type="primary"
+              :loading="actionUserId === row.userId && actionType === 'toggle'"
+              @click="handleToggleStatus(row)"
+            >
+              {{ row.status === 'disabled' ? '解封' : '封号' }}
+            </el-button>
+            <el-button
+              link
+              type="danger"
+              :loading="actionUserId === row.userId && actionType === 'delete'"
+              @click="handleDelete(row)"
+            >
+              删除
+            </el-button>
+          </div>
         </template>
       </el-table-column>
     </el-table>
@@ -67,13 +96,15 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref, watch } from 'vue'
-import { ElMessage } from 'element-plus'
-import { createAgent, getAgentList } from '@/management/api/space'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { createAgent, deleteAgent, getAgentList, updateAgentStatus } from '@/management/api/space'
 import { CODE_MAP } from '@/management/api/base'
 
 const keyword = ref('')
 const showDialog = ref(false)
 const submitting = ref(false)
+const actionUserId = ref('')
+const actionType = ref<'toggle' | 'delete' | ''>('')
 const formRef = ref<any>(null)
 const agentList = ref<any[]>([])
 const formData = reactive({
@@ -88,6 +119,11 @@ const fetchAgents = async (searchKeyword = keyword.value) => {
   } else {
     agentList.value = []
   }
+}
+
+const setAction = (userId = '', type: 'toggle' | 'delete' | '' = '') => {
+  actionUserId.value = userId
+  actionType.value = type
 }
 
 watch(keyword, (value) => {
@@ -118,6 +154,61 @@ const handleCreate = () => {
   })
 }
 
+const handleToggleStatus = async (row: any) => {
+  const nextStatus = row.status === 'disabled' ? 'active' : 'disabled'
+  const actionText = nextStatus === 'disabled' ? '封号' : '解封'
+  try {
+    await ElMessageBox.confirm(`确认要${actionText}代理账号“${row.username}”吗？`, '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+  } catch (error) {
+    return
+  }
+
+  setAction(row.userId, 'toggle')
+  try {
+    const res: any = await updateAgentStatus({
+      userId: row.userId,
+      status: nextStatus
+    })
+    if (res.code === CODE_MAP.SUCCESS) {
+      ElMessage.success(`${actionText}成功`)
+      await fetchAgents(keyword.value)
+    } else {
+      ElMessage.error(res.errmsg || `${actionText}失败`)
+    }
+  } finally {
+    setAction()
+  }
+}
+
+const handleDelete = async (row: any) => {
+  try {
+    await ElMessageBox.confirm(`确认要删除代理账号“${row.username}”吗？删除后不可恢复。`, '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+  } catch (error) {
+    return
+  }
+
+  setAction(row.userId, 'delete')
+  try {
+    const res: any = await deleteAgent(row.userId)
+    if (res.code === CODE_MAP.SUCCESS) {
+      ElMessage.success('删除成功')
+      await fetchAgents(keyword.value)
+    } else {
+      ElMessage.error(res.errmsg || '删除失败')
+    }
+  } finally {
+    setAction()
+  }
+}
+
 onMounted(() => fetchAgents(''))
 </script>
 
@@ -140,5 +231,11 @@ onMounted(() => fetchAgents(''))
   margin: 16px 0;
   justify-content: flex-start;
   max-width: 320px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 </style>

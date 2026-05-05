@@ -35,6 +35,7 @@ import { WorkspaceGuard } from 'src/guards/workspace.guard';
 import { PERMISSION as WORKSPACE_PERMISSION } from 'src/enums/workspace';
 import { SessionService } from '../services/session.service';
 import { UserService } from 'src/modules/auth/services/user.service';
+import { USER_ROLE } from 'src/enums/user';
 
 import { FilesInterceptor } from '@nestjs/platform-express';
 import * as XLSX from 'xlsx';
@@ -295,6 +296,9 @@ export class SurveyController {
   @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_DELIVERY_MANAGE])
   @UseGuards(Authentication)
   async pausingSurvey(@Request() req) {
+    if (req.user?.role === USER_ROLE.AGENT) {
+      throw new HttpException('没有权限', EXCEPTION_CODE.NO_PERMISSION);
+    }
     const surveyMeta = req.surveyMeta;
 
     await this.surveyMetaService.pausingSurveyMeta(surveyMeta);

@@ -197,6 +197,9 @@ export class SurveyMetaService {
       isRecycleBin,
     } = condition;
     const skip = (pageNum - 1) * pageSize;
+    if (role === USER_ROLE.AGENT && (!surveyIdList || surveyIdList.length === 0)) {
+      return { data: [], count: 0 };
+    }
     try {
       var query: ObjectLiteral
       if (isRecycleBin) {
@@ -246,7 +249,7 @@ export class SurveyMetaService {
         otherQuery['subStatus.status'] = RECORD_SUB_STATUS.DEFAULT;
       }
       if (role === USER_ROLE.AGENT) {
-        otherQuery.assignedAgentIds = userId;
+        // 代理仅通过授权记录访问问卷，不再走历史 assignedAgentIds 兜底。
       } else if (workspaceId) {
         otherQuery.workspaceId = workspaceId;
       } else if (role !== USER_ROLE.ADMIN) {
@@ -294,7 +297,9 @@ export class SurveyMetaService {
       }
 
       if (Array.isArray(query.$or)) {
-        query.$or.push(otherQuery);
+        if (Object.keys(otherQuery).length > 0) {
+          query.$or.push(otherQuery);
+        }
       } else {
         Object.assign(query, otherQuery);
       }

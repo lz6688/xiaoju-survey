@@ -223,6 +223,39 @@ describe('AuthController', () => {
         ),
       );
     });
+
+    it('should reject disabled agent account login', async () => {
+      const mockUserInfo = {
+        username: 'disabledAgent',
+        password: 'testPassword',
+        captchaId: 'testCaptchaId',
+        captcha: 'testCaptcha',
+      };
+
+      jest
+        .spyOn(captchaService, 'checkCaptchaIsCorrect')
+        .mockResolvedValue(true);
+      jest.spyOn(userService, 'getUserByUsername').mockResolvedValue(
+        Promise.resolve({
+          username: 'disabledAgent',
+          _id: new ObjectId(),
+          role: USER_ROLE.AGENT,
+          status: 'disabled',
+        } as unknown as User),
+      );
+      jest.spyOn(userService, 'getUser').mockResolvedValue(
+        Promise.resolve({
+          username: 'disabledAgent',
+          _id: new ObjectId(),
+          role: USER_ROLE.AGENT,
+          status: 'disabled',
+        } as unknown as User),
+      );
+
+      await expect(controller.login(mockUserInfo, {} as any)).rejects.toThrow(
+        new HttpException('账号已被封禁', EXCEPTION_CODE.NO_PERMISSION),
+      );
+    });
   });
 
   describe('getCaptcha', () => {

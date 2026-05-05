@@ -391,6 +391,31 @@ describe('CollaboratorController', () => {
       expect(collaboratorService.updateById).toHaveBeenCalled();
     });
 
+    it('should allow clearing all collaborators', async () => {
+      const surveyId = new ObjectId().toString();
+      const reqBody: BatchSaveCollaboratorDto = {
+        surveyId,
+        collaborators: [],
+      };
+      const req = {
+        user: { _id: new ObjectId().toString(), username: 'admin' },
+        surveyMeta: { ownerId: 'ownerId' },
+      };
+
+      jest
+        .spyOn(collaboratorService, 'batchDeleteBySurveyId')
+        .mockResolvedValue({ deletedCount: 2, acknowledged: true } as any);
+
+      const response = await controller.batchSaveCollaborator(reqBody, req);
+
+      expect(response).toEqual({
+        code: 200,
+      });
+      expect(collaboratorService.batchDeleteBySurveyId).toHaveBeenCalledWith(
+        surveyId,
+      );
+    });
+
     it('should throw an exception if validation fails', async () => {
       const reqBody: BatchSaveCollaboratorDto = {
         surveyId: '',
@@ -510,7 +535,7 @@ describe('CollaboratorController', () => {
       });
     });
 
-    it('should return default agent permissions for legacy assigned agents without collaborator record', async () => {
+    it('should return empty permissions for legacy assigned agents without collaborator record', async () => {
       const req = {
         user: { _id: new ObjectId(), username: 'agent', role: 'agent' },
       };
@@ -536,10 +561,7 @@ describe('CollaboratorController', () => {
         code: 200,
         data: {
           isOwner: false,
-          permissions: [
-            SURVEY_PERMISSION.SURVEY_DELIVERY_MANAGE,
-            SURVEY_PERMISSION.SURVEY_RESPONSE_MANAGE,
-          ],
+          permissions: [],
         },
       });
     });

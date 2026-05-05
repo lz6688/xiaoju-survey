@@ -6,7 +6,7 @@ import { Authentication } from 'src/guards/authentication.guard';
 import { HttpException } from 'src/exceptions/httpException';
 import { EXCEPTION_CODE } from 'src/enums/exceptionCode';
 import { User } from 'src/models/user.entity';
-import { USER_ROLE } from 'src/enums/user';
+import { USER_ROLE, USER_STATUS } from 'src/enums/user';
 
 describe('UserController', () => {
   let userController: UserController;
@@ -22,6 +22,8 @@ describe('UserController', () => {
             getUserListByUsername: jest.fn(),
             getAgentList: jest.fn(),
             createAgent: jest.fn(),
+            updateAgentStatus: jest.fn(),
+            deleteAgent: jest.fn(),
             updateActiveAudit: jest.fn(),
           },
         },
@@ -119,6 +121,10 @@ describe('UserController', () => {
       const result = await userController.createAgent({
         username: 'agentUser',
         password: 'agent123',
+      }, {
+        user: {
+          role: USER_ROLE.ADMIN,
+        },
       });
 
       expect(userService.createAgent).toHaveBeenCalledWith({
@@ -150,6 +156,7 @@ describe('UserController', () => {
           _id: agentId,
           username: 'agentUser',
           role: USER_ROLE.AGENT,
+          status: USER_STATUS.ACTIVE,
           lastLoginAt: new Date('2026-05-05T09:00:00.000Z'),
           lastLoginIp: '203.0.113.7',
           lastActiveAt: new Date('2026-05-05T09:30:00.000Z'),
@@ -157,7 +164,11 @@ describe('UserController', () => {
         } as unknown as User,
       ]);
 
-      const result = await userController.getAgentList(queryInfo);
+      const result = await userController.getAgentList(queryInfo, {
+        user: {
+          role: USER_ROLE.ADMIN,
+        },
+      });
 
       expect(userService.getAgentList).toHaveBeenCalledWith({
         username: '',
@@ -171,6 +182,7 @@ describe('UserController', () => {
             userId: agentId,
             username: 'agentUser',
             role: USER_ROLE.AGENT,
+            status: USER_STATUS.ACTIVE,
             lastLoginAt: new Date('2026-05-05T09:00:00.000Z'),
             lastLoginIp: '203.0.113.7',
             lastActiveAt: new Date('2026-05-05T09:30:00.000Z'),
@@ -178,6 +190,48 @@ describe('UserController', () => {
           },
         ],
       });
+    });
+
+    it('should update agent status', async () => {
+      jest.spyOn(userService, 'updateAgentStatus').mockResolvedValue(undefined);
+
+      const result = await userController.updateAgentStatus(
+        {
+          userId: '60c72b2f9b1e8a5f4b123456',
+          status: USER_STATUS.DISABLED,
+        },
+        {
+          user: {
+            role: USER_ROLE.ADMIN,
+          },
+        },
+      );
+
+      expect(userService.updateAgentStatus).toHaveBeenCalledWith({
+        userId: '60c72b2f9b1e8a5f4b123456',
+        status: USER_STATUS.DISABLED,
+      });
+      expect(result).toEqual({ code: 200 });
+    });
+
+    it('should delete agent account', async () => {
+      jest.spyOn(userService, 'deleteAgent').mockResolvedValue(undefined);
+
+      const result = await userController.deleteAgent(
+        {
+          userId: '60c72b2f9b1e8a5f4b123456',
+        },
+        {
+          user: {
+            role: USER_ROLE.ADMIN,
+          },
+        },
+      );
+
+      expect(userService.deleteAgent).toHaveBeenCalledWith({
+        userId: '60c72b2f9b1e8a5f4b123456',
+      });
+      expect(result).toEqual({ code: 200 });
     });
   });
 });

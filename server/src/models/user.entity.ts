@@ -1,6 +1,6 @@
 import { Entity, Column } from 'typeorm';
 import { BaseEntity } from './base.entity';
-import { USER_ROLE } from 'src/enums/user';
+import { USER_ROLE, USER_STATUS } from 'src/enums/user';
 @Entity({ name: 'user' })
 export class User extends BaseEntity {
   @Column()
@@ -11,6 +11,9 @@ export class User extends BaseEntity {
 
   @Column()
   role: USER_ROLE;
+
+  @Column()
+  status: USER_STATUS;
 
   @Column()
   lastLoginAt: Date;

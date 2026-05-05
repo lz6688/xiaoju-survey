@@ -202,7 +202,7 @@ describe('SurveyMetaController', () => {
     });
   });
 
-  it('should include authorized agent summaries in survey list', async () => {
+  it('should not include legacy assigned agents in authorized summaries', async () => {
     const surveyId = new ObjectId().toString();
     const agentId = new ObjectId().toString();
     const req = {
@@ -242,7 +242,7 @@ describe('SurveyMetaController', () => {
 
     expect(result.data.data[0]).toEqual(
       expect.objectContaining({
-        authorizedAgents: [{ userId: agentId, username: 'agentA' }],
+        authorizedAgents: [],
       }),
     );
   });
@@ -308,6 +308,34 @@ describe('SurveyMetaController', () => {
         userId,
         username: 'admin',
         role: USER_ROLE.ADMIN,
+      }),
+    );
+  });
+
+  it('should only query authorized survey ids for agent list', async () => {
+    const surveyId = new ObjectId().toString();
+    const userId = new ObjectId().toString();
+    const req = {
+      user: {
+        username: 'agentA',
+        _id: new ObjectId(userId),
+        role: USER_ROLE.AGENT,
+      },
+    };
+
+    jest
+      .spyOn(collaboratorService, 'getCollaboratorListByUserId')
+      .mockResolvedValue([{ surveyId }] as any);
+
+    await controller.getList({ curPage: 1, pageSize: 10 }, req);
+
+    expect(collaboratorService.getCollaboratorListByUserId).toHaveBeenCalledWith({
+      userId,
+    });
+    expect(surveyMetaService.getSurveyMetaList).toHaveBeenCalledWith(
+      expect.objectContaining({
+        role: USER_ROLE.AGENT,
+        surveyIdList: [surveyId],
       }),
     );
   });

@@ -177,6 +177,72 @@ const questionInfo = ref({})
 const currentPage = ref(1)
 const { searchVal, selectValueMap, buttonValueMap } = storeToRefs(surveyListStore)
 const isAgent = computed(() => userStore.userInfo?.role === 'agent')
+const getRowPermissions = (row) =>
+  Array.isArray(row?.currentPermissions) ? row.currentPermissions : []
+const hasPermission = (row, permission) => getRowPermissions(row).includes(permission)
+const getPermissionTools = (row) => {
+  const tools = []
+
+  if (hasPermission(row, SurveyPermissions.EditManage)) {
+    tools.push({
+      key: QOP_MAP.EDIT,
+      label: '修改'
+    })
+  }
+  if (hasPermission(row, SurveyPermissions.ResponseManage)) {
+    tools.push({
+      key: 'analysis',
+      label: '数据'
+    })
+  }
+  if (hasPermission(row, SurveyPermissions.DeliveryManage)) {
+    if (!isAgent.value) {
+      tools.push({
+        key: subStatus.pausing.value,
+        label: '暂停'
+      })
+    }
+    tools.push({
+      key: 'release',
+      label: '投放'
+    })
+  }
+  if (hasPermission(row, SurveyPermissions.AuthManage)) {
+    tools.push({
+      key: 'authorize',
+      label: '授权'
+    })
+  }
+
+  return tools
+}
+const getDefaultRoute = (row) => {
+  if (hasPermission(row, SurveyPermissions.EditManage)) {
+    return {
+      name: 'QuestionEditIndex',
+      params: {
+        id: row._id
+      }
+    }
+  }
+  if (hasPermission(row, SurveyPermissions.DeliveryManage)) {
+    return {
+      name: 'publish',
+      params: {
+        id: row._id
+      }
+    }
+  }
+  if (hasPermission(row, SurveyPermissions.ResponseManage)) {
+    return {
+      name: 'analysisPage',
+      params: {
+        id: row._id
+      }
+    }
+  }
+  return null
+}
 
 const currentComponent = computed(() => {
   return (componentName) => {
@@ -239,16 +305,7 @@ const onRefresh = async () => {
 
 const getToolConfig = (row) => {
   if (isAgent.value) {
-    return [
-      {
-        key: 'analysis',
-        label: '数据'
-      },
-      {
-        key: 'release',
-        label: '投放'
-      }
-    ]
+    return getPermissionTools(row)
   }
 
   let funcList = []
@@ -289,15 +346,13 @@ const getToolConfig = (row) => {
       // 创建人显示授权按钮
       funcList = funcList.concat(permissionsBtn)
     } else {
-      if (row.currentPermissions.includes(SurveyPermissions.ResponseManage)) {
-        // 授权成员判断权限显示数据分析按钮
+      if (hasPermission(row, SurveyPermissions.ResponseManage)) {
         funcList.push({
           key: 'analysis',
           label: '数据'
         })
       }
-      if (row.currentPermissions.includes(SurveyPermissions.DeliveryManage)) {
-        // 授权成员判断权限显示投放按钮
+      if (hasPermission(row, SurveyPermissions.DeliveryManage)) {
         funcList.push(
           {
             key: subStatus.pausing.value,
@@ -309,7 +364,7 @@ const getToolConfig = (row) => {
           }
         )
       }
-      if (row.currentPermissions.includes(SurveyPermissions.EditManage)) {
+      if (hasPermission(row, SurveyPermissions.EditManage)) {
         funcList.push(
           {
             key: QOP_MAP.EDIT,
@@ -327,7 +382,7 @@ const getToolConfig = (row) => {
           }
         )
       }
-      if (row.currentPermissions.includes(SurveyPermissions.AuthManage)) {
+      if (hasPermission(row, SurveyPermissions.AuthManage)) {
         funcList.push({
           key: 'authorize',
           label: '授权'
@@ -452,12 +507,10 @@ const onCloseModify = (type) => {
 }
 const onRowClick = (row) => {
   if (isAgent.value) {
-    router.push({
-      name: 'publish',
-      params: {
-        id: row._id
-      }
-    })
+    const targetRoute = getDefaultRoute(row)
+    if (targetRoute) {
+      router.push(targetRoute)
+    }
     return
   }
   router.push({

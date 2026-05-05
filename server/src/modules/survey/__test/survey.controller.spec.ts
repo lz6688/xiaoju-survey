@@ -11,6 +11,7 @@ import { ObjectId } from 'mongodb';
 import { Logger } from 'src/logger';
 import { HttpException } from 'src/exceptions/httpException';
 import { Authentication } from 'src/guards/authentication.guard';
+import { USER_ROLE } from 'src/enums/user';
 
 jest.mock('../services/surveyMeta.service');
 jest.mock('../services/surveyConf.service');
@@ -292,9 +293,18 @@ describe('SurveyController', () => {
 
       const result = await controller.pausingSurvey({
         surveyMeta,
-        user: { username: 'testUser' },
+        user: { username: 'testUser', role: USER_ROLE.ADMIN },
       });
       expect(result.code).toBe(200);
+    });
+
+    it('should reject pausing survey for agent users', async () => {
+      await expect(
+        controller.pausingSurvey({
+          surveyMeta: { surveyPath: 'some/path' },
+          user: { username: 'agentUser', role: USER_ROLE.AGENT },
+        }),
+      ).rejects.toThrow(HttpException);
     });
   });
 

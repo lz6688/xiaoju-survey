@@ -17,12 +17,19 @@ import { HttpException } from 'src/exceptions/httpException';
 
 import { UserService } from '../services/user.service';
 import { GetUserListDto } from '../dto/getUserList.dto';
+import { USER_ROLE, USER_STATUS } from 'src/enums/user';
 
 @ApiTags('user')
 @ApiBearerAuth()
 @Controller('/api/user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
+
+  private ensureAdmin(req) {
+    if (req.user?.role !== USER_ROLE.ADMIN) {
+      throw new HttpException('没有权限', EXCEPTION_CODE.NO_PERMISSION);
+    }
+  }
 
   @UseGuards(Authentication)
   @Get('/getUserList')
@@ -60,7 +67,9 @@ export class UserController {
   async getAgentList(
     @Query()
     queryInfo: GetUserListDto,
+    @Request() req,
   ) {
+    this.ensureAdmin(req);
     const { value, error } = GetUserListDto.validate(queryInfo);
     if (error) {
       throw new HttpException('参数有误', EXCEPTION_CODE.PARAMETER_ERROR);
@@ -79,6 +88,7 @@ export class UserController {
           userId: item._id.toString(),
           username: item.username,
           role: item.role,
+          status: item.status,
           lastLoginAt: item.lastLoginAt,
           lastLoginIp: item.lastLoginIp,
           lastActiveAt: item.lastActiveAt,
@@ -97,7 +107,9 @@ export class UserController {
       username: string;
       password: string;
     },
+    @Request() req,
   ) {
+    this.ensureAdmin(req);
     const user = await this.userService.createAgent(payload);
     return {
       code: 200,
@@ -106,6 +118,50 @@ export class UserController {
         username: user.username,
         role: user.role,
       },
+    };
+  }
+
+  @UseGuards(Authentication)
+  @Post('/updateAgentStatus')
+  @HttpCode(200)
+  async updateAgentStatus(
+    @Body()
+    payload: {
+      userId: string;
+      status: USER_STATUS;
+    },
+    @Request() req,
+  ) {
+    this.ensureAdmin(req);
+    if (
+      !payload?.userId ||
+      ![USER_STATUS.ACTIVE, USER_STATUS.DISABLED].includes(payload.status)
+    ) {
+      throw new HttpException('参数有误', EXCEPTION_CODE.PARAMETER_ERROR);
+    }
+    await this.userService.updateAgentStatus(payload);
+    return {
+      code: 200,
+    };
+  }
+
+  @UseGuards(Authentication)
+  @Post('/deleteAgent')
+  @HttpCode(200)
+  async deleteAgent(
+    @Body()
+    payload: {
+      userId: string;
+    },
+    @Request() req,
+  ) {
+    this.ensureAdmin(req);
+    if (!payload?.userId) {
+      throw new HttpException('参数有误', EXCEPTION_CODE.PARAMETER_ERROR);
+    }
+    await this.userService.deleteAgent(payload);
+    return {
+      code: 200,
     };
   }
 

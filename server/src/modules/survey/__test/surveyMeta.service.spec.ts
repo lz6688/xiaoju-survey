@@ -296,7 +296,23 @@ describe('SurveyMetaService', () => {
       );
     });
 
-    it('should restrict agent survey list to assigned survey ids', async () => {
+    it('should return empty result when agent has no authorized survey ids', async () => {
+      const result = await service.getSurveyMetaList({
+        pageNum: 1,
+        pageSize: 10,
+        userId: 'agentUserId',
+        username: 'agent',
+        role: USER_ROLE.AGENT,
+        filter: {},
+        order: {},
+      });
+
+      expect(result).toEqual({ data: [], count: 0 });
+      expect(surveyRepository.findAndCount).not.toHaveBeenCalled();
+    });
+
+    it('should only query authorized survey ids for agent survey list', async () => {
+      const surveyId = new ObjectId().toString();
       jest.spyOn(surveyRepository, 'findAndCount').mockResolvedValue([[], 0]);
 
       await service.getSurveyMetaList({
@@ -307,13 +323,22 @@ describe('SurveyMetaService', () => {
         role: USER_ROLE.AGENT,
         filter: {},
         order: {},
+        surveyIdList: [surveyId],
       });
 
       expect(surveyRepository.findAndCount).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({
-            assignedAgentIds: 'agentUserId',
-          }),
+          where: {
+            isDeleted: { $ne: true },
+            $or: [
+              {
+                _id: {
+                  $in: [new ObjectId(surveyId)],
+                },
+                isDeleted: { $ne: true },
+              },
+            ],
+          },
         }),
       );
     });

@@ -6,7 +6,7 @@ import { User } from 'src/models/user.entity';
 import { HttpException } from 'src/exceptions/httpException';
 import { hash256 } from 'src/utils/hash256';
 import { ObjectId } from 'mongodb';
-import { USER_ROLE } from 'src/enums/user';
+import { USER_ROLE, USER_STATUS } from 'src/enums/user';
 
 describe('UserService', () => {
   let service: UserService;
@@ -24,6 +24,7 @@ describe('UserService', () => {
             findOne: jest.fn(),
             find: jest.fn(),
             updateOne: jest.fn(),
+            deleteOne: jest.fn(),
           },
         },
       ],
@@ -64,6 +65,7 @@ describe('UserService', () => {
       username: userInfo.username,
       password: expect.any(String),
       role: USER_ROLE.AGENT,
+      status: USER_STATUS.ACTIVE,
     });
     expect(saveSpy).toHaveBeenCalled();
     expect(user).toEqual(userInfo);
@@ -78,6 +80,7 @@ describe('UserService', () => {
       ...userInfo,
       password: hash256(userInfo.password),
       role: USER_ROLE.AGENT,
+      status: USER_STATUS.ACTIVE,
     } as unknown as User;
 
     jest.spyOn(userRepository, 'findOne').mockResolvedValue(null);
@@ -90,6 +93,7 @@ describe('UserService', () => {
       username: userInfo.username,
       password: hash256(userInfo.password),
       role: USER_ROLE.AGENT,
+      status: USER_STATUS.ACTIVE,
     });
     expect(user).toEqual(createdUser);
   });
@@ -99,6 +103,7 @@ describe('UserService', () => {
       username: 'admin',
       password: hash256('admin'),
       role: USER_ROLE.ADMIN,
+      status: USER_STATUS.ACTIVE,
     } as unknown as User;
 
     jest.spyOn(userRepository, 'findOne').mockResolvedValue(null);
@@ -114,6 +119,7 @@ describe('UserService', () => {
       username: 'admin',
       password: hash256('admin'),
       role: USER_ROLE.ADMIN,
+      status: USER_STATUS.ACTIVE,
     });
     expect(userRepository.save).toHaveBeenCalledWith(adminUser);
   });
@@ -124,6 +130,7 @@ describe('UserService', () => {
       username: 'admin',
       password: hash256('admin'),
       role: USER_ROLE.AGENT,
+      status: USER_STATUS.ACTIVE,
     } as unknown as User;
 
     jest.spyOn(userRepository, 'findOne').mockResolvedValue(adminUser);
@@ -228,6 +235,7 @@ describe('UserService', () => {
       ...userInfo,
       password: hashedPassword,
       role: USER_ROLE.AGENT,
+      status: USER_STATUS.ACTIVE,
     });
   });
 
@@ -398,6 +406,7 @@ describe('UserService', () => {
         'username',
         'createdAt',
         'role',
+        'status',
         'lastLoginAt',
         'lastLoginIp',
         'lastActiveAt',
@@ -430,6 +439,7 @@ describe('UserService', () => {
         'username',
         'createdAt',
         'role',
+        'status',
         'lastLoginAt',
         'lastLoginIp',
         'lastActiveAt',
@@ -438,6 +448,43 @@ describe('UserService', () => {
       order: {
         createdAt: -1,
       },
+    });
+  });
+
+  it('should update agent status', async () => {
+    const userId = new ObjectId().toString();
+
+    await service.updateAgentStatus({
+      userId,
+      status: USER_STATUS.DISABLED,
+    });
+
+    expect(userRepository.updateOne).toHaveBeenCalledWith(
+      {
+        _id: new ObjectId(userId),
+        role: USER_ROLE.AGENT,
+      },
+      {
+        $set: {
+          status: USER_STATUS.DISABLED,
+        },
+      },
+    );
+  });
+
+  it('should delete agent user', async () => {
+    const userId = new ObjectId().toString();
+    const deleteOne = jest
+      .spyOn(userRepository, 'deleteOne')
+      .mockResolvedValue({ acknowledged: true } as any);
+
+    await service.deleteAgent({
+      userId,
+    });
+
+    expect(deleteOne).toHaveBeenCalledWith({
+      _id: new ObjectId(userId),
+      role: USER_ROLE.AGENT,
     });
   });
 

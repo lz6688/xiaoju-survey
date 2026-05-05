@@ -120,10 +120,6 @@ const rules = {
     {
       trigger: 'change',
       validator: (rule: any, value: IMember[], callback: Function) => {
-        if (value.length === 0) {
-          callback('请添加成员')
-          return
-        }
         if (value.filter((item: IMember) => !item.role.length).length) {
           callback('请设置成员对应权限')
           return

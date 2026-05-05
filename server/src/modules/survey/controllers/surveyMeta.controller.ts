@@ -114,7 +114,7 @@ export class SurveyMetaController {
     }
     const userId = req.user._id.toString();
     let cooperationList = [];
-    if (groupId === GROUP_STATE.ALL) {
+    if (req.user.role === USER_ROLE.AGENT || groupId === GROUP_STATE.ALL) {
       cooperationList =
         await this.collaboratorService.getCollaboratorListByUserId({ userId });
     }
@@ -160,15 +160,8 @@ export class SurveyMetaController {
       pre[surveyIds[index]] = cur;
       return pre;
     }, {});
-    const collaboratorUserIds = collaboratorList
-      .flat()
-      .map((item) => item.userId);
-    const legacyAgentIds = data.data
-      .flatMap((item) =>
-        Array.isArray(item.assignedAgentIds) ? item.assignedAgentIds : [],
-      )
-      .filter(Boolean);
-    const uniqueUserIds = [...new Set([...collaboratorUserIds, ...legacyAgentIds])];
+    const collaboratorUserIds = collaboratorList.flat().map((item) => item.userId);
+    const uniqueUserIds = [...new Set(collaboratorUserIds)];
     const userInfoList = uniqueUserIds.length
       ? await this.userService.getUserListByIds({ idList: uniqueUserIds })
       : [];
@@ -204,16 +197,7 @@ export class SurveyMetaController {
           userId: collaborator.userId,
           username: userInfoMap[collaborator.userId]?.username || '',
         }));
-      const legacyAgents = (Array.isArray(item.assignedAgentIds) ? item.assignedAgentIds : [])
-        .filter(
-          (agentId) => !collaboratorAgents.some((collaborator) => collaborator.userId === agentId),
-        )
-        .map((agentId) => ({
-          userId: agentId,
-          username: userInfoMap[agentId]?.username || '',
-        }))
-        .filter((agent) => agent.username);
-      item.authorizedAgents = [...collaboratorAgents, ...legacyAgents];
+      item.authorizedAgents = collaboratorAgents;
       item.currentUserId = userId;
       return item;
     })

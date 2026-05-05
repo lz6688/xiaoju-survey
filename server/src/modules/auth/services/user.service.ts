@@ -6,7 +6,7 @@ import { HttpException } from 'src/exceptions/httpException';
 import { EXCEPTION_CODE } from 'src/enums/exceptionCode';
 import { hash256 } from 'src/utils/hash256';
 import { ObjectId } from 'mongodb';
-import { USER_ROLE } from 'src/enums/user';
+import { USER_ROLE, USER_STATUS } from 'src/enums/user';
 
 @Injectable()
 export class UserService {
@@ -15,9 +15,14 @@ export class UserService {
     private readonly userRepository: MongoRepository<User>,
   ) {}
 
-  private normalizeRole<T extends User | null | undefined>(user: T): T {
-    if (user && !user.role) {
-      user.role = USER_ROLE.AGENT;
+  private normalizeUser<T extends User | null | undefined>(user: T): T {
+    if (user) {
+      if (!user.role) {
+        user.role = USER_ROLE.AGENT;
+      }
+      if (!user.status) {
+        user.status = USER_STATUS.ACTIVE;
+      }
     }
     return user;
   }
@@ -39,6 +44,7 @@ export class UserService {
       username: userInfo.username,
       password: hash256(userInfo.password),
       role: userInfo.role || USER_ROLE.AGENT,
+      status: USER_STATUS.ACTIVE,
     });
 
     return this.userRepository.save(newUser);
@@ -55,7 +61,7 @@ export class UserService {
   }
 
   async ensureDefaultAdmin() {
-    const adminUser = this.normalizeRole(
+    const adminUser = this.normalizeUser(
       await this.userRepository.findOne({
         where: { username: 'admin' },
       }),
@@ -66,12 +72,21 @@ export class UserService {
         username: 'admin',
         password: hash256('admin'),
         role: USER_ROLE.ADMIN,
+        status: USER_STATUS.ACTIVE,
       });
       return this.userRepository.save(newUser);
     }
 
+    let shouldSave = false;
     if (adminUser.role !== USER_ROLE.ADMIN) {
       adminUser.role = USER_ROLE.ADMIN;
+      shouldSave = true;
+    }
+    if (adminUser.status !== USER_STATUS.ACTIVE) {
+      adminUser.status = USER_STATUS.ACTIVE;
+      shouldSave = true;
+    }
+    if (shouldSave) {
       return this.userRepository.save(adminUser);
     }
 
@@ -89,7 +104,7 @@ export class UserService {
       },
     });
 
-    return this.normalizeRole(user);
+    return this.normalizeUser(user);
   }
 
   async getUserByUsername(username) {
@@ -99,7 +114,7 @@ export class UserService {
       },
     });
 
-    return this.normalizeRole(user);
+    return this.normalizeUser(user);
   }
 
   async getUserById(id: string) {
@@ -109,7 +124,7 @@ export class UserService {
       },
     });
 
-    return this.normalizeRole(user);
+    return this.normalizeUser(user);
   }
 
   async getUserListByUsername({ username, skip, take }) {
@@ -121,7 +136,7 @@ export class UserService {
       take,
       select: ['_id', 'username', 'createdAt', 'role'],
     });
-    return list.map((item) => this.normalizeRole(item));
+    return list.map((item) => this.normalizeUser(item));
   }
 
   async getAgentList({ username, skip, take }) {
@@ -141,6 +156,7 @@ export class UserService {
         'username',
         'createdAt',
         'role',
+        'status',
         'lastLoginAt',
         'lastLoginIp',
         'lastActiveAt',
@@ -150,7 +166,7 @@ export class UserService {
         createdAt: -1,
       },
     });
-    return list.map((item) => this.normalizeRole(item));
+    return list.map((item) => this.normalizeUser(item));
   }
 
   async updateLoginAudit({
@@ -205,7 +221,34 @@ export class UserService {
       },
       select: ['_id', 'username', 'createdAt', 'role'],
     });
-    return list.map((item) => this.normalizeRole(item));
+    return list.map((item) => this.normalizeUser(item));
+  }
+
+  async updateAgentStatus({
+    userId,
+    status,
+  }: {
+    userId: string;
+    status: USER_STATUS;
+  }) {
+    return this.userRepository.updateOne(
+      {
+        _id: new ObjectId(userId),
+        role: USER_ROLE.AGENT,
+      },
+      {
+        $set: {
+          status,
+        },
+      },
+    );
+  }
+
+  async deleteAgent({ userId }: { userId: string }) {
+    return this.userRepository.deleteOne({
+      _id: new ObjectId(userId),
+      role: USER_ROLE.AGENT,
+    });
   }
 
   async changePassword({

@@ -230,7 +230,7 @@ describe('SurveyGuard', () => {
     expect(collaboratorService.getCollaborator).not.toHaveBeenCalled();
   });
 
-  it('should allow assigned agents when handler enables agent access', async () => {
+  it('should deny assigned agents when they do not have collaborator permissions', async () => {
     const context = createMockExecutionContext({
       user: {
         username: 'agent',
@@ -256,9 +256,9 @@ describe('SurveyGuard', () => {
       assignedAgentIds: ['agentUserId'],
     } as unknown as SurveyMeta);
 
-    const result = await guard.canActivate(context);
-
-    expect(result).toBe(true);
+    await expect(guard.canActivate(context)).rejects.toThrow(
+      NoPermissionException,
+    );
   });
 
   it('should deny assigned agents when handler does not enable agent access', async () => {

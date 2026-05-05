@@ -92,21 +92,6 @@ export class SurveyGuard implements CanActivate {
       }
     }
 
-    const assignedAgentIds = Array.isArray(surveyMeta.assignedAgentIds)
-      ? surveyMeta.assignedAgentIds
-      : [];
-    const fallbackPermissions: string[] =
-      user.role === USER_ROLE.AGENT &&
-      assignedAgentIds.includes(user._id.toString())
-        ? this.collaboratorService.getDefaultAgentPermissions()
-        : [];
-
-    if (
-      permissions.some((permission) => fallbackPermissions.includes(permission))
-    ) {
-      return true;
-    }
-
     throw new NoPermissionException('没有权限');
   }
 }

@@ -53,22 +53,6 @@ export class SurveyGuard implements CanActivate {
       return true;
     }
 
-    if (user.role === USER_ROLE.AGENT) {
-      const agentAccess = this.reflector.get<boolean>(
-        'agentAccess',
-        context.getHandler(),
-      );
-      const assignedAgentIds = Array.isArray(surveyMeta.assignedAgentIds)
-        ? surveyMeta.assignedAgentIds
-        : [];
-
-      if (assignedAgentIds.includes(user._id.toString()) && agentAccess) {
-        return true;
-      }
-
-      throw new NoPermissionException('没有权限');
-    }
-
     if (surveyMeta.workspaceId) {
       const memberInfo = await this.workspaceMemberService.findOne({
         workspaceId: surveyMeta.workspaceId,
@@ -94,15 +78,35 @@ export class SurveyGuard implements CanActivate {
       userId: user._id.toString(),
     });
 
-    if (!info) {
-      throw new NoPermissionException('没有权限');
+    if (info) {
+      const normalizedPermissions = this.collaboratorService.normalizePermissions(
+        info.permissions,
+      );
+      request.collaborator = info;
+      if (
+        permissions.some((permission) =>
+          normalizedPermissions.includes(permission),
+        )
+      ) {
+        return true;
+      }
     }
-    request.collaborator = info;
+
+    const assignedAgentIds = Array.isArray(surveyMeta.assignedAgentIds)
+      ? surveyMeta.assignedAgentIds
+      : [];
+    const fallbackPermissions: string[] =
+      user.role === USER_ROLE.AGENT &&
+      assignedAgentIds.includes(user._id.toString())
+        ? this.collaboratorService.getDefaultAgentPermissions()
+        : [];
+
     if (
-      permissions.some((permission) => info.permissions.includes(permission))
+      permissions.some((permission) => fallbackPermissions.includes(permission))
     ) {
       return true;
     }
+
     throw new NoPermissionException('没有权限');
   }
 }

@@ -30,8 +30,9 @@ export class SurveyHistoryController {
   @UseGuards(SurveyGuard)
   @SetMetadata('surveyId', 'query.surveyId')
   @SetMetadata('surveyPermission', [
-    SURVEY_PERMISSION.SURVEY_CONF_MANAGE,
-    SURVEY_PERMISSION.SURVEY_COOPERATION_MANAGE,
+    SURVEY_PERMISSION.SURVEY_EDIT_MANAGE,
+    SURVEY_PERMISSION.SURVEY_DELIVERY_MANAGE,
+    SURVEY_PERMISSION.SURVEY_AUTH_MANAGE,
     SURVEY_PERMISSION.SURVEY_RESPONSE_MANAGE,
   ])
   @UseGuards(Authentication)

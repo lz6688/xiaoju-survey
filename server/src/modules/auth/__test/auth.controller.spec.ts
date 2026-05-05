@@ -111,6 +111,14 @@ describe('AuthController', () => {
         captchaId: 'testCaptchaId',
         captcha: 'testCaptcha',
       };
+      const req = {
+        headers: {
+          'x-forwarded-for': '203.0.113.7, 10.0.0.1',
+        },
+        socket: {
+          remoteAddress: '10.0.0.2',
+        },
+      };
 
       jest
         .spyOn(captchaService, 'checkCaptchaIsCorrect')
@@ -133,8 +141,9 @@ describe('AuthController', () => {
       );
 
       jest.spyOn(authService, 'generateToken').mockResolvedValue('testToken');
+      jest.spyOn(userService, 'updateLoginAudit').mockResolvedValue(undefined);
 
-      const result = await controller.login(mockUserInfo);
+      const result = await controller.login(mockUserInfo, req as any);
 
       expect(result).toEqual({
         code: 200,
@@ -143,6 +152,10 @@ describe('AuthController', () => {
           username: 'testUser',
           role: USER_ROLE.AGENT,
         },
+      });
+      expect(userService.updateLoginAudit).toHaveBeenCalledWith({
+        userId: expect.any(String),
+        ip: '203.0.113.7',
       });
     });
 

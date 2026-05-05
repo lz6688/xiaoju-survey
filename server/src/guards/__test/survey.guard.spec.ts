@@ -35,6 +35,26 @@ describe('SurveyGuard', () => {
           provide: CollaboratorService,
           useValue: {
             getCollaborator: jest.fn(),
+            normalizePermissions: jest.fn((permissions: string[] = []) => {
+              const mapped = new Set<string>();
+              permissions.forEach((permission) => {
+                if (permission === SURVEY_PERMISSION.SURVEY_CONF_MANAGE) {
+                  mapped.add(SURVEY_PERMISSION.SURVEY_EDIT_MANAGE);
+                  mapped.add(SURVEY_PERMISSION.SURVEY_DELIVERY_MANAGE);
+                } else if (
+                  permission === SURVEY_PERMISSION.SURVEY_COOPERATION_MANAGE
+                ) {
+                  mapped.add(SURVEY_PERMISSION.SURVEY_AUTH_MANAGE);
+                } else {
+                  mapped.add(permission);
+                }
+              });
+              return Array.from(mapped);
+            }),
+            getDefaultAgentPermissions: jest.fn(() => [
+              SURVEY_PERMISSION.SURVEY_DELIVERY_MANAGE,
+              SURVEY_PERMISSION.SURVEY_RESPONSE_MANAGE,
+            ]),
           },
         },
         {
@@ -173,7 +193,7 @@ describe('SurveyGuard', () => {
     jest.spyOn(reflector, 'get').mockReturnValueOnce('params.surveyId');
     jest
       .spyOn(reflector, 'get')
-      .mockReturnValueOnce([SURVEY_PERMISSION.SURVEY_CONF_MANAGE]);
+      .mockReturnValueOnce([SURVEY_PERMISSION.SURVEY_EDIT_MANAGE]);
     jest
       .spyOn(surveyMetaService, 'getSurveyById')
       .mockResolvedValue(surveyMeta as SurveyMeta);
@@ -224,8 +244,8 @@ describe('SurveyGuard', () => {
         if (key === 'surveyId') {
           return 'params.surveyId';
         }
-        if (key === 'agentAccess') {
-          return true;
+        if (key === 'surveyPermission') {
+          return [SURVEY_PERMISSION.SURVEY_DELIVERY_MANAGE];
         }
         return undefined;
       });
@@ -255,8 +275,8 @@ describe('SurveyGuard', () => {
         if (key === 'surveyId') {
           return 'params.surveyId';
         }
-        if (key === 'agentAccess') {
-          return false;
+        if (key === 'surveyPermission') {
+          return [SURVEY_PERMISSION.SURVEY_AUTH_MANAGE];
         }
         return undefined;
       });

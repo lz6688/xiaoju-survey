@@ -51,7 +51,7 @@ export class ChannelController {
   @ApiBearerAuth()
   @UseGuards(Authentication, SurveyGuard)
   @SetMetadata('surveyId', 'body.surveyId')
-  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_CONF_MANAGE])
+  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_DELIVERY_MANAGE])
   @SetMetadata('agentAccess', true)
   async create(@Body() channel: CreateChannelDto, @Request() req) {
     const { value, error } = CreateChannelDto.validate(channel);
@@ -85,7 +85,7 @@ export class ChannelController {
   @ApiBearerAuth()
   @UseGuards(Authentication, SurveyGuard)
   @SetMetadata('surveyId', 'query.surveyId')
-  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_CONF_MANAGE])
+  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_DELIVERY_MANAGE])
   @SetMetadata('agentAccess', true)
   @HttpCode(200)
   async findAll(@Request() req, @Query() queryInfo: GetChannelListDto) {
@@ -158,7 +158,7 @@ export class ChannelController {
   @ApiBearerAuth()
   @UseGuards(Authentication, SurveyGuard)
   @SetMetadata('surveyId', 'body.surveyId')
-  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_CONF_MANAGE])
+  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_DELIVERY_MANAGE])
   @SetMetadata('agentAccess', true)
   async update(@Body() channel: Partial<Channel>, @Request() req) {
     const id = req.body.channelId;
@@ -212,7 +212,7 @@ export class ChannelController {
   @ApiBearerAuth()
   @UseGuards(Authentication, SurveyGuard)
   @SetMetadata('surveyId', 'body.surveyId')
-  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_CONF_MANAGE])
+  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_DELIVERY_MANAGE])
   @SetMetadata('agentAccess', true)
   @HttpCode(200)
   async updateStatus(
@@ -238,7 +238,7 @@ export class ChannelController {
   @ApiBearerAuth()
   @UseGuards(Authentication, SurveyGuard)
   @SetMetadata('surveyId', 'body.surveyId')
-  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_CONF_MANAGE])
+  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_DELIVERY_MANAGE])
   @SetMetadata('agentAccess', true)
   @HttpCode(200)
   async delete(@Request() req) {

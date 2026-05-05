@@ -48,6 +48,7 @@ export class UserController {
         return {
           userId: item._id.toString(),
           username: item.username,
+          role: item.role,
         };
       }),
     };
@@ -78,6 +79,10 @@ export class UserController {
           userId: item._id.toString(),
           username: item.username,
           role: item.role,
+          lastLoginAt: item.lastLoginAt,
+          lastLoginIp: item.lastLoginIp,
+          lastActiveAt: item.lastActiveAt,
+          lastActiveIp: item.lastActiveIp,
         };
       }),
     };

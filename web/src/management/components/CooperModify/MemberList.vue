@@ -1,7 +1,12 @@
 <template>
   <div class="list-wrapper" v-if="list.length">
     <div class="content" v-for="(item, index) in list" :key="item.userId">
-      <div>{{ item.username }}</div>
+      <div class="user-info">
+        <span>{{ item.username }}</span>
+        <span v-if="item.accountRole" class="role-tag">
+          {{ accountRoleLabels[item.accountRole] || '代理' }}
+        </span>
+      </div>
       <div class="operation">
         <OperationSelect
           :options="options"
@@ -16,7 +21,11 @@
 </template>
 <script lang="ts" setup>
 import { computed } from 'vue'
-import { type IMember, type ListItem } from '@/management/utils/workSpace'
+import {
+  accountRoleLabels,
+  type IMember,
+  type ListItem
+} from '@/management/utils/workSpace'
 import OperationSelect from './OperationSelect.vue'
 import { useWorkSpaceStore } from '@/management/stores/workSpace'
 
@@ -67,9 +76,29 @@ const handleRemove = (index: number) => {
     justify-content: space-between;
     align-items: center;
     padding: 0 20px;
+    gap: 16px;
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .role-tag {
+      color: #606266;
+      background: #f4f4f5;
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 12px;
+      line-height: 18px;
+      white-space: nowrap;
+    }
 
     .operation {
       display: flex;
+      flex: 1;
+      justify-content: flex-end;
     }
   }
 }

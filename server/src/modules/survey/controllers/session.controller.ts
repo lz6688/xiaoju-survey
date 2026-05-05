@@ -32,7 +32,7 @@ export class SessionController {
   @HttpCode(200)
   @UseGuards(SurveyGuard)
   @SetMetadata('surveyId', 'body.surveyId')
-  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_CONF_MANAGE])
+  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_EDIT_MANAGE])
   @UseGuards(Authentication)
   async create(
     @Body()
@@ -70,7 +70,7 @@ export class SessionController {
   @UseGuards(SessionGuard, SurveyGuard)
   @SetMetadata('sessionId', 'body.sessionId')
   @SetMetadata('surveyId', 'surveyId')
-  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_CONF_MANAGE])
+  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_EDIT_MANAGE])
   @UseGuards(Authentication)
   async seize(
     @Request()

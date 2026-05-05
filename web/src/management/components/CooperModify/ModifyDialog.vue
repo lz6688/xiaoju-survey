@@ -16,7 +16,7 @@
       @submit.prevent
       :disabled="formDisabled"
     >
-      <el-form-item label="添加协作者" prop="members">
+      <el-form-item label="添加成员" prop="members">
         <MemberSelect
           :multiple="true"
           :members="formModel.members"
@@ -45,7 +45,11 @@ import { ElMessage } from 'element-plus'
 import 'element-plus/theme-chalk/src/message.scss'
 
 import { getPermissionList, getCollaborator, saveCollaborator } from '@/management/api/space'
-import { type IMember, SurveyPermissions } from '@/management/utils/workSpace'
+import {
+  AccountRole,
+  type IMember,
+  SurveyPermissions
+} from '@/management/utils/workSpace'
 import { CODE_MAP } from '@/management/api/base'
 
 import MemberSelect from './MemberSelect.vue'
@@ -63,7 +67,7 @@ const props = withDefaults(
 )
 const ruleForm = shallowRef<any>(null)
 
-const formTitle = ref('协作管理')
+const formTitle = ref('授权管理')
 
 const cooperOptions = ref([])
 
@@ -96,16 +100,17 @@ watch(
               _id: item._id,
               userId: item.userId,
               username: item.username,
-              role: item.permissions
+              role: item.permissions,
+              accountRole: item.role || AccountRole.Agent
             }
           })
           fetchPermissionList()
         } else {
           formModel.value.members = []
-          ElMessage.error(res.errmsg || '获取协作信息失败')
+          ElMessage.error(res.errmsg || '获取授权信息失败')
         }
       } catch (err) {
-        ElMessage.error('获取协作信息接口请求错误')
+        ElMessage.error('获取授权信息接口请求错误')
       }
     }
   }
@@ -116,18 +121,12 @@ const rules = {
       trigger: 'change',
       validator: (rule: any, value: IMember[], callback: Function) => {
         if (value.length === 0) {
-          callback('请添加协作者')
+          callback('请添加成员')
+          return
         }
         if (value.filter((item: IMember) => !item.role.length).length) {
-          callback('请设置协作者对应权限')
-        }
-        if (
-          value.filter(
-            (item: IMember) =>
-              item.role.length === 1 && item.role[0] === SurveyPermissions.CollaboratorManage
-          ).length
-        ) {
-          callback('不能单独设置协作者管理')
+          callback('请设置成员对应权限')
+          return
         }
         callback()
       }
@@ -162,7 +161,7 @@ const onConfirm = async () => {
           ElMessage.success('操作成功')
           emit('on-close-codify')
         } else {
-          ElMessage.error(res.errmsg || '协作管理接口调用失败')
+          ElMessage.error(res.errmsg || '授权管理接口调用失败')
         }
       } catch (err) {
         ElMessage.error('createSpace status err' + err)
@@ -173,15 +172,21 @@ const onConfirm = async () => {
   })
 }
 
-const handleMemberSelect = (val: string, label: string) => {
+const handleMemberSelect = (val: string, label: string, accountRole = AccountRole.Agent) => {
+  const defaultPermissions =
+    accountRole === AccountRole.Agent
+      ? [SurveyPermissions.DeliveryManage, SurveyPermissions.ResponseManage]
+      : [
+          SurveyPermissions.EditManage,
+          SurveyPermissions.DeliveryManage,
+          SurveyPermissions.AuthManage,
+          SurveyPermissions.ResponseManage
+        ]
   formModel.value.members.push({
     userId: val,
     username: label,
-    role: [
-      SurveyPermissions.SurveyManage,
-      SurveyPermissions.DataManage,
-      SurveyPermissions.CollaboratorManage
-    ]
+    role: defaultPermissions,
+    accountRole
   })
 }
 const handleMembersChange = (val: IMember[]) => {

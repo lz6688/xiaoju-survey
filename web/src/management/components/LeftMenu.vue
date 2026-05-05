@@ -70,10 +70,13 @@ const tabs = computed(() => {
 
   const result = []
   const permissions = editStore.cooperPermissions
-  if (permissions.includes(SurveyPermissions.SurveyManage)) {
-    result.push(tabArr[0], tabArr[1])
+  if (permissions.includes(SurveyPermissions.EditManage)) {
+    result.push(tabArr[0])
   }
-  if (permissions.includes(SurveyPermissions.DataManage)) {
+  if (permissions.includes(SurveyPermissions.DeliveryManage)) {
+    result.push(tabArr[1])
+  }
+  if (permissions.includes(SurveyPermissions.ResponseManage)) {
     result.push(tabArr[2])
   }
   return result

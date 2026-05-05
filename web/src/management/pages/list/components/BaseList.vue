@@ -110,13 +110,6 @@
       @on-close-codify="onCloseModify"
     />
     <CooperModify :modifyId="cooperId" :visible="cooperModify" @on-close-codify="onCooperClose" />
-    <AssignAgentDialog
-      :visible="showAssignDialog"
-      :survey-id="assignSurveyId"
-      :agent-ids="assignAgentIds"
-      @close="showAssignDialog = false"
-      @success="handleAssignSuccess"
-    />
   </div>
 </template>
 
@@ -146,7 +139,6 @@ import TextSearch from './TextSearch.vue'
 import TextSelect from './TextSelect.vue'
 import TextButton from './TextButton.vue'
 import { SurveyPermissions } from '@/management/utils/workSpace'
-import AssignAgentDialog from './AssignAgentDialog.vue'
 
 import {
   fieldConfig,
@@ -178,17 +170,13 @@ const props = defineProps({
   }
 })
 const emit = defineEmits(['refresh'])
-const fields = ['type', 'title', 'remark', 'owner', 'state', 'createdAt', 'updatedAt']
+const fields = ['type', 'title', 'remark', 'owner', 'authorizedAgentsText', 'state', 'createdAt', 'updatedAt']
 const showModify = ref(false)
-const showAssignDialog = ref(false)
-const assignSurveyId = ref('')
-const assignAgentIds = ref([])
 const modifyType = ref('')
 const questionInfo = ref({})
 const currentPage = ref(1)
 const { searchVal, selectValueMap, buttonValueMap } = storeToRefs(surveyListStore)
 const isAgent = computed(() => userStore.userInfo?.role === 'agent')
-const isAdmin = computed(() => userStore.userInfo?.role === 'admin')
 
 const currentComponent = computed(() => {
   return (componentName) => {
@@ -218,6 +206,9 @@ const dataList = computed(() => {
   return data.value.map((item) => {
     return {
       ...item,
+      authorizedAgentsText: Array.isArray(item.authorizedAgents)
+        ? item.authorizedAgents.map((agent) => agent.username).filter(Boolean).join('、')
+        : '',
       'curStatus.date': item.curStatus ? item.curStatus.date : '',
       'subStatus.date': item.subStatus ? item.subStatus.date : ''
     }
@@ -289,36 +280,37 @@ const getToolConfig = (row) => {
       label: '暂停'
     },
     {
-      key: 'cooper',
-      label: '协作'
-    },
-    {
-      key: 'assign',
-      label: '分配'
+      key: 'authorize',
+      label: '授权'
     }
   ]
   if (!workSpaceId.value) {
     if (!row.isCollaborated) {
-      // 创建人显示协作按钮
+      // 创建人显示授权按钮
       funcList = funcList.concat(permissionsBtn)
-      if (!isAdmin.value) {
-        funcList = funcList.filter((item) => item.key !== 'assign')
-      }
     } else {
-      if (row.currentPermissions.includes(SurveyPermissions.DataManage)) {
-        // 协作人判断权限显示数据分析按钮
+      if (row.currentPermissions.includes(SurveyPermissions.ResponseManage)) {
+        // 授权成员判断权限显示数据分析按钮
         funcList.push({
           key: 'analysis',
           label: '数据'
         })
       }
-      if (row.currentPermissions.includes(SurveyPermissions.SurveyManage)) {
-        // 协作人判断权限显示投放按钮
+      if (row.currentPermissions.includes(SurveyPermissions.DeliveryManage)) {
+        // 授权成员判断权限显示投放按钮
         funcList.push(
           {
             key: subStatus.pausing.value,
             label: '暂停'
           },
+          {
+            key: 'release',
+            label: '投放'
+          }
+        )
+      }
+      if (row.currentPermissions.includes(SurveyPermissions.EditManage)) {
+        funcList.push(
           {
             key: QOP_MAP.EDIT,
             label: '修改'
@@ -332,40 +324,23 @@ const getToolConfig = (row) => {
             key: QOP_MAP.COPY,
             label: '复制',
             icon: 'icon-shanchu'
-          },
-          {
-            key: 'release',
-            label: '投放'
           }
         )
       }
-      if (row.currentPermissions.includes(SurveyPermissions.CollaboratorManage)) {
-        // 协作人判断权限显示协作按钮
+      if (row.currentPermissions.includes(SurveyPermissions.AuthManage)) {
         funcList.push({
-          key: 'cooper',
-          label: '协作'
-        })
-      }
-      if (isAdmin.value) {
-        funcList.push({
-          key: 'assign',
-          label: '分配'
+          key: 'authorize',
+          label: '授权'
         })
       }
     }
   } else {
-    // 团队空间没有开放协作功能，不需要判断按钮状态
+    // 团队空间保留原有行为，但对外统一成授权管理
     funcList = permissionsBtn.filter((item) => {
-      if (item.key === 'cooper') {
-        return false
-      }
-      if (item.key === 'assign') {
-        return isAdmin.value
-      }
-      return true
+      return item.key !== 'authorize'
     })
   }
-  const order = ['edit', 'analysis', 'release', 'pausing', 'delete', 'copy', 'cooper', 'assign']
+  const order = ['edit', 'analysis', 'release', 'pausing', 'delete', 'copy', 'authorize']
   if (
     row.curStatus.status === curStatus.new.value ||
     row.subStatus.status === subStatus.pausing.value
@@ -405,13 +380,8 @@ const handleClick = (key, data) => {
     case 'delete':
       onDelete(data)
       return
-    case 'cooper':
+    case 'authorize':
       onCooper(data)
-      return
-    case 'assign':
-      assignSurveyId.value = data._id
-      assignAgentIds.value = Array.isArray(data.assignedAgentIds) ? data.assignedAgentIds : []
-      showAssignDialog.value = true
       return
     case 'pausing':
       onPausing(data)
@@ -521,9 +491,6 @@ const onCooper = async (row) => {
 }
 const onCooperClose = () => {
   cooperModify.value = false
-}
-const handleAssignSuccess = () => {
-  showAssignDialog.value = false
   onRefresh()
 }
 const resetCurrentPage = () => {

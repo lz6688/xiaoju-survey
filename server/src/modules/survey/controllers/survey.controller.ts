@@ -72,7 +72,7 @@ export class SurveyController {
   @HttpCode(200)
   @UseGuards(SurveyGuard)
   @SetMetadata('surveyId', 'body.createFrom')
-  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_CONF_MANAGE])
+  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_EDIT_MANAGE])
   @UseGuards(WorkspaceGuard)
   @SetMetadata('workspacePermissions', [WORKSPACE_PERMISSION.READ_SURVEY])
   @SetMetadata('workspaceId', { key: 'body.workspaceId', optional: true })
@@ -133,7 +133,7 @@ export class SurveyController {
   @HttpCode(200)
   @UseGuards(SurveyGuard)
   @SetMetadata('surveyId', 'body.surveyId')
-  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_CONF_MANAGE])
+  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_EDIT_MANAGE])
   @UseGuards(Authentication)
   async updateConf(
     @Body()
@@ -211,7 +211,7 @@ export class SurveyController {
   @Post('/deleteSurvey')
   @UseGuards(SurveyGuard)
   @SetMetadata('surveyId', 'body.surveyId')
-  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_CONF_MANAGE])
+  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_EDIT_MANAGE])
   @UseGuards(Authentication)
   async deleteSurvey(@Request() req) {
     const surveyMeta = req.surveyMeta;
@@ -238,7 +238,7 @@ export class SurveyController {
   @Post('/recoverSurvey')
   @UseGuards(SurveyGuard)
   @SetMetadata('surveyId', 'body.surveyId')
-  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_CONF_MANAGE])
+  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_EDIT_MANAGE])
   @UseGuards(Authentication)
   async recoverSurvey(@Request() req) {
     const surveyMeta = req.surveyMeta;
@@ -265,7 +265,7 @@ export class SurveyController {
   @Post('/completeDeleteSurvey')
   @UseGuards(SurveyGuard)
   @SetMetadata('surveyId', 'body.surveyId')
-  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_CONF_MANAGE])
+  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_EDIT_MANAGE])
   @UseGuards(Authentication)
   async completeDeleteSurvey(@Request() req) {
     const surveyMeta = req.surveyMeta;
@@ -292,7 +292,7 @@ export class SurveyController {
   @Post('/pausingSurvey')
   @UseGuards(SurveyGuard)
   @SetMetadata('surveyId', 'body.surveyId')
-  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_CONF_MANAGE])
+  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_DELIVERY_MANAGE])
   @UseGuards(Authentication)
   async pausingSurvey(@Request() req) {
     const surveyMeta = req.surveyMeta;
@@ -312,8 +312,9 @@ export class SurveyController {
   @UseGuards(SurveyGuard)
   @SetMetadata('surveyId', 'query.surveyId')
   @SetMetadata('surveyPermission', [
-    SURVEY_PERMISSION.SURVEY_CONF_MANAGE,
-    SURVEY_PERMISSION.SURVEY_COOPERATION_MANAGE,
+    SURVEY_PERMISSION.SURVEY_EDIT_MANAGE,
+    SURVEY_PERMISSION.SURVEY_DELIVERY_MANAGE,
+    SURVEY_PERMISSION.SURVEY_AUTH_MANAGE,
     SURVEY_PERMISSION.SURVEY_RESPONSE_MANAGE,
   ])
   @SetMetadata('agentAccess', true)
@@ -397,7 +398,7 @@ export class SurveyController {
   @HttpCode(200)
   @UseGuards(SurveyGuard)
   @SetMetadata('surveyId', 'body.surveyId')
-  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_CONF_MANAGE])
+  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_DELIVERY_MANAGE])
   @UseGuards(Authentication)
   async publishSurvey(
     @Body()

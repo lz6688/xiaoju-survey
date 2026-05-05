@@ -6,6 +6,7 @@ import { Logger } from 'src/logger';
 import { HttpException } from 'src/exceptions/httpException';
 import { EXCEPTION_CODE } from 'src/enums/exceptionCode';
 import { CollaboratorService } from '../services/collaborator.service';
+import { UserService } from 'src/modules/auth/services/user.service';
 import { ObjectId } from 'mongodb';
 import { USER_ROLE } from 'src/enums/user';
 
@@ -16,6 +17,8 @@ jest.mock('src/guards/workspace.guard');
 describe('SurveyMetaController', () => {
   let controller: SurveyMetaController;
   let surveyMetaService: SurveyMetaService;
+  let collaboratorService: CollaboratorService;
+  let userService: UserService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -42,6 +45,7 @@ describe('SurveyMetaController', () => {
           useValue: {
             getCollaboratorListByUserId: jest.fn().mockResolvedValue([]),
             getManageListByUserId: jest.fn().mockResolvedValue([]),
+            getSurveyCollaboratorList: jest.fn().mockResolvedValue([]),
           },
         },
         {
@@ -49,12 +53,20 @@ describe('SurveyMetaController', () => {
           useValue: {
             getAllSurveyIdListByUserId: jest.fn().mockResolvedValue([]),
           },
+        },
+        {
+          provide: UserService,
+          useValue: {
+            getUserListByIds: jest.fn().mockResolvedValue([]),
+          },
         }
       ],
     }).compile();
 
     controller = module.get<SurveyMetaController>(SurveyMetaController);
     surveyMetaService = module.get<SurveyMetaService>(SurveyMetaService);
+    collaboratorService = module.get<CollaboratorService>(CollaboratorService);
+    userService = module.get<UserService>(UserService);
   });
 
   it('should update survey meta', async () => {
@@ -131,21 +143,22 @@ describe('SurveyMetaController', () => {
         const date = new Date().getTime();
         return Promise.resolve({
           count: 10,
-          data: [
-            {
-              _id: new ObjectId(),
-              createdAt: date,
-              updatedAt: date,
-              curStatus: {
-                date: date,
-              },
-              subStatus: {
-                date: date,
-              },
-              surveyType: 'normal',
-            },
-          ],
-        });
+      data: [
+        {
+          _id: new ObjectId(),
+          createdAt: date,
+          updatedAt: date,
+          curStatus: {
+            date: date,
+          },
+          subStatus: {
+            date: date,
+          },
+          surveyType: 'normal',
+          assignedAgentIds: [],
+        },
+      ],
+    });
       });
 
     const result = await controller.getList(queryInfo, req);
@@ -156,6 +169,7 @@ describe('SurveyMetaController', () => {
         count: 10,
         data: expect.arrayContaining([
           expect.objectContaining({
+            authorizedAgents: [],
             createdAt: expect.stringMatching(
               /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/,
             ),
@@ -186,6 +200,51 @@ describe('SurveyMetaController', () => {
       workspaceId: undefined,
       role: undefined,
     });
+  });
+
+  it('should include authorized agent summaries in survey list', async () => {
+    const surveyId = new ObjectId().toString();
+    const agentId = new ObjectId().toString();
+    const req = {
+      user: {
+        username: 'admin',
+        _id: new ObjectId().toString(),
+        role: USER_ROLE.ADMIN,
+      },
+    };
+    jest.spyOn(surveyMetaService, 'getSurveyMetaList').mockResolvedValue({
+      count: 1,
+      data: [
+        {
+          _id: new ObjectId(surveyId),
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          curStatus: { date: Date.now() },
+          subStatus: { date: Date.now() },
+          surveyType: 'normal',
+          assignedAgentIds: [agentId],
+        },
+      ],
+    });
+
+    jest
+      .spyOn(collaboratorService, 'getSurveyCollaboratorList')
+      .mockResolvedValue([]);
+    jest.spyOn(userService, 'getUserListByIds').mockResolvedValue([
+      {
+        _id: new ObjectId(agentId),
+        username: 'agentA',
+        role: USER_ROLE.AGENT,
+      } as any,
+    ]);
+
+    const result = await controller.getList({ curPage: 1, pageSize: 10 }, req);
+
+    expect(result.data.data[0]).toEqual(
+      expect.objectContaining({
+        authorizedAgents: [{ userId: agentId, username: 'agentA' }],
+      }),
+    );
   });
 
   it('should get survey meta list with filter and order', async () => {

@@ -27,10 +27,10 @@ import { ref } from 'vue'
 import MemberList from './MemberList.vue'
 import { getUserList } from '@/management/api/space'
 import {
+  AccountRole,
+  accountRoleLabels,
   type IMember,
-  type ListItem,
-  type UserRole,
-  roleLabels
+  type ListItem
 } from '@/management/utils/workSpace'
 import { CODE_MAP } from '@/management/api/base'
 import { useUserStore } from '@/management/stores/user'
@@ -44,12 +44,7 @@ const props = withDefaults(
   }>(),
   {
     members: () => [],
-    options: () => {
-      return Object.keys(roleLabels).map((key) => ({
-        label: roleLabels[key as UserRole],
-        value: key
-      }))
-    },
+    options: () => [],
     multiple: false
   }
 )
@@ -68,9 +63,12 @@ const remoteMethod = async (q: string) => {
       selectOptions.value = res.data.map((item: any) => {
         // 不可以选中自己
         const currentUser = item.username === userStore.userInfo?.username
+        const role = (item.role || AccountRole.Agent) as AccountRole
         return {
           value: item.userId,
-          label: item.username,
+          label: `${item.username}（${accountRoleLabels[role] || '代理'}）`,
+          rawLabel: item.username,
+          role,
           disabled: props.members.map((item) => item.userId).includes(item.userId) || currentUser
         }
       })
@@ -82,7 +80,8 @@ const remoteMethod = async (q: string) => {
 }
 const handleSelect = (val: string) => {
   value.value = ''
-  emit('select', val, selectOptions.value?.find((item) => item.value === val)?.label)
+  const selected: any = selectOptions.value?.find((item) => item.value === val)
+  emit('select', val, selected?.rawLabel || selected?.label, selected?.role || AccountRole.Agent)
 }
 const handleMemberChange = (val: any) => {
   emit('change', val)

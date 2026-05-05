@@ -1,7 +1,7 @@
 <template>
   <div class="btn" @click="onCooper">
     <i-ep-connection class="view-icon" :size="20" />
-    <span class="btn-txt">协作</span>
+    <span class="btn-txt">授权</span>
   </div>
   <CooperModify :modifyId="cooperId" :visible="cooperModify" @on-close-codify="onCooperClose" />
 </template>

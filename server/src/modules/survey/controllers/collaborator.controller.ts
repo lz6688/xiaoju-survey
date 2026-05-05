@@ -22,6 +22,7 @@ import {
 } from 'src/enums/surveyPermission';
 import { Logger } from 'src/logger';
 import { WorkspaceMemberService } from 'src/modules/workspace/services/workspaceMember.service';
+import { USER_ROLE } from 'src/enums/user';
 
 import { CollaboratorService } from '../services/collaborator.service';
 import { UserService } from 'src/modules/auth/services/user.service';
@@ -49,7 +50,12 @@ export class CollaboratorController {
   @Get('getPermissionList')
   @HttpCode(200)
   async getPermissionList() {
-    const vals = Object.values(SURVEY_PERMISSION_DESCRIPTION);
+    const vals = [
+      SURVEY_PERMISSION_DESCRIPTION.surveyEditManage,
+      SURVEY_PERMISSION_DESCRIPTION.surveyDeliveryManage,
+      SURVEY_PERMISSION_DESCRIPTION.surveyAuthManage,
+      SURVEY_PERMISSION_DESCRIPTION.surveyResponseManage,
+    ];
     return {
       code: 200,
       data: vals,
@@ -60,9 +66,7 @@ export class CollaboratorController {
   @HttpCode(200)
   @UseGuards(SurveyGuard)
   @SetMetadata('surveyId', 'body.surveyId')
-  @SetMetadata('surveyPermission', [
-    SURVEY_PERMISSION.SURVEY_COOPERATION_MANAGE,
-  ])
+  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_AUTH_MANAGE])
   async addCollaborator(
     @Body() reqBody: CreateCollaboratorDto,
     @Request() req,
@@ -115,9 +119,7 @@ export class CollaboratorController {
   @HttpCode(200)
   @UseGuards(SurveyGuard)
   @SetMetadata('surveyId', 'body.surveyId')
-  @SetMetadata('surveyPermission', [
-    SURVEY_PERMISSION.SURVEY_COOPERATION_MANAGE,
-  ])
+  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_AUTH_MANAGE])
   async batchSaveCollaborator(
     @Body() reqBody: BatchSaveCollaboratorDto,
     @Request() req,
@@ -226,9 +228,7 @@ export class CollaboratorController {
   @HttpCode(200)
   @UseGuards(SurveyGuard)
   @SetMetadata('surveyId', 'query.surveyId')
-  @SetMetadata('surveyPermission', [
-    SURVEY_PERMISSION.SURVEY_COOPERATION_MANAGE,
-  ])
+  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_AUTH_MANAGE])
   async getSurveyCollaboratorList(
     @Query() query: GetSurveyCollaboratorListDto,
   ) {
@@ -256,6 +256,7 @@ export class CollaboratorController {
         return {
           ...item,
           username: userInfoMap[item.userId]?.username || '',
+          role: userInfoMap[item.userId]?.role || USER_ROLE.AGENT,
         };
       }),
     };
@@ -265,9 +266,7 @@ export class CollaboratorController {
   @HttpCode(200)
   @UseGuards(SurveyGuard)
   @SetMetadata('surveyId', 'body.surveyId')
-  @SetMetadata('surveyPermission', [
-    SURVEY_PERMISSION.SURVEY_COOPERATION_MANAGE,
-  ])
+  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_AUTH_MANAGE])
   async changeUserPermission(@Body() reqBody: ChangeUserPermissionDto) {
     const { error, value } = Joi.object({
       surveyId: Joi.string(),
@@ -291,9 +290,7 @@ export class CollaboratorController {
   @HttpCode(200)
   @UseGuards(SurveyGuard)
   @SetMetadata('surveyId', 'body.surveyId')
-  @SetMetadata('surveyPermission', [
-    SURVEY_PERMISSION.SURVEY_COOPERATION_MANAGE,
-  ])
+  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_AUTH_MANAGE])
   async deleteCollaborator(@Query() query) {
     const { error, value } = Joi.object({
       surveyId: Joi.string(),
@@ -335,9 +332,10 @@ export class CollaboratorController {
         data: {
           isOwner: true,
           permissions: [
-            SURVEY_PERMISSION.SURVEY_COOPERATION_MANAGE,
+            SURVEY_PERMISSION.SURVEY_AUTH_MANAGE,
+            SURVEY_PERMISSION.SURVEY_DELIVERY_MANAGE,
+            SURVEY_PERMISSION.SURVEY_EDIT_MANAGE,
             SURVEY_PERMISSION.SURVEY_RESPONSE_MANAGE,
-            SURVEY_PERMISSION.SURVEY_CONF_MANAGE,
           ],
         },
       };
@@ -354,9 +352,10 @@ export class CollaboratorController {
           data: {
             isOwner: false,
             permissions: [
-              SURVEY_PERMISSION.SURVEY_COOPERATION_MANAGE,
+              SURVEY_PERMISSION.SURVEY_AUTH_MANAGE,
+              SURVEY_PERMISSION.SURVEY_DELIVERY_MANAGE,
+              SURVEY_PERMISSION.SURVEY_EDIT_MANAGE,
               SURVEY_PERMISSION.SURVEY_RESPONSE_MANAGE,
-              SURVEY_PERMISSION.SURVEY_CONF_MANAGE,
             ],
           },
         };
@@ -367,11 +366,29 @@ export class CollaboratorController {
       surveyId,
       userId,
     });
+    if (
+      !colloborator &&
+      user.role === USER_ROLE.AGENT &&
+      Array.isArray(surveyMeta.assignedAgentIds) &&
+      surveyMeta.assignedAgentIds.includes(userId)
+    ) {
+      return {
+        code: 200,
+        data: {
+          isOwner: false,
+          permissions: this.collaboratorService.getDefaultAgentPermissions(),
+        },
+      };
+    }
     return {
       code: 200,
       data: {
         isOwner: false,
-        permissions: colloborator?.permissions || [],
+        permissions: colloborator
+          ? this.collaboratorService.normalizePermissions(
+              colloborator.permissions,
+            )
+          : [],
       },
     };
   }

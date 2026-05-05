@@ -28,6 +28,7 @@ export type IMember = {
   userId: string
   username: string
   role: any
+  accountRole?: AccountRole
   _id?: string
 }
 
@@ -77,6 +78,11 @@ export enum UserRole {
   Member = 'user'
 }
 
+export enum AccountRole {
+  Admin = 'admin',
+  Agent = 'agent'
+}
+
 export enum GroupState {
   All = 'all',
   Not = 'unclassified'
@@ -88,14 +94,21 @@ export const roleLabels: Record<UserRole, string> = {
   [UserRole.Member]: '成员'
 }
 
+export const accountRoleLabels: Record<AccountRole, string> = {
+  [AccountRole.Admin]: '管理员',
+  [AccountRole.Agent]: '代理'
+}
+
 export enum SurveyPermissions {
-  SurveyManage = 'SURVEY_CONF_MANAGE',
-  DataManage = 'SURVEY_RESPONSE_MANAGE',
-  CollaboratorManage = 'SURVEY_COOPERATION_MANAGE'
+  EditManage = 'SURVEY_EDIT_MANAGE',
+  DeliveryManage = 'SURVEY_DELIVERY_MANAGE',
+  AuthManage = 'SURVEY_AUTH_MANAGE',
+  ResponseManage = 'SURVEY_RESPONSE_MANAGE'
 }
 // 定义协作者权限标签映射对象
 export const surveyPermissionsLabels: Record<SurveyPermissions, string> = {
-  [SurveyPermissions.SurveyManage]: '问卷管理',
-  [SurveyPermissions.DataManage]: '数据管理',
-  [SurveyPermissions.CollaboratorManage]: '协作管理'
+  [SurveyPermissions.EditManage]: '问卷编辑',
+  [SurveyPermissions.DeliveryManage]: '投放管理',
+  [SurveyPermissions.AuthManage]: '授权管理',
+  [SurveyPermissions.ResponseManage]: '数据查看'
 }

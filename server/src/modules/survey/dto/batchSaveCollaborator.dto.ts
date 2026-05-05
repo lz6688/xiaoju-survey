@@ -14,7 +14,10 @@ export class CollaboratorDto {
     required: true,
     isArray: true,
     enum: [
+      SURVEY_PERMISSION.SURVEY_EDIT_MANAGE,
+      SURVEY_PERMISSION.SURVEY_DELIVERY_MANAGE,
       SURVEY_PERMISSION.SURVEY_CONF_MANAGE,
+      SURVEY_PERMISSION.SURVEY_AUTH_MANAGE,
       SURVEY_PERMISSION.SURVEY_COOPERATION_MANAGE,
       SURVEY_PERMISSION.SURVEY_RESPONSE_MANAGE,
     ],
@@ -42,7 +45,10 @@ export class BatchSaveCollaboratorDto {
               .required()
               .items(
                 Joi.string().valid(
+                  SURVEY_PERMISSION.SURVEY_EDIT_MANAGE,
+                  SURVEY_PERMISSION.SURVEY_DELIVERY_MANAGE,
                   SURVEY_PERMISSION.SURVEY_CONF_MANAGE,
+                  SURVEY_PERMISSION.SURVEY_AUTH_MANAGE,
                   SURVEY_PERMISSION.SURVEY_COOPERATION_MANAGE,
                   SURVEY_PERMISSION.SURVEY_RESPONSE_MANAGE,
                 ),

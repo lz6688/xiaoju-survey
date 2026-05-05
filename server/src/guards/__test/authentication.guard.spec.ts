@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { Authentication } from '../authentication.guard';
 import { AuthService } from 'src/modules/auth/services/auth.service';
+import { UserService } from 'src/modules/auth/services/user.service';
 import { AuthenticationException } from 'src/exceptions/authException';
 import { User } from 'src/models/user.entity';
 
@@ -26,6 +27,12 @@ describe('Authentication', () => {
           provide: ConfigService,
           useValue: {
             get: jest.fn(),
+          },
+        },
+        {
+          provide: UserService,
+          useValue: {
+            updateActiveAudit: jest.fn(),
           },
         },
       ],
@@ -78,6 +85,10 @@ describe('Authentication', () => {
     const request = {
       headers: {
         authorization: 'Bearer validToken',
+        'x-forwarded-for': '203.0.113.7, 10.0.0.1',
+      },
+      socket: {
+        remoteAddress: '10.0.0.2',
       },
     };
     const context = {
@@ -86,7 +97,12 @@ describe('Authentication', () => {
       }),
     };
 
-    const fakeUser = { username: 'testUser' } as User;
+    const fakeUser = {
+      _id: {
+        toString: () => '60c72b2f9b1e8a5f4b123456',
+      },
+      username: 'testUser',
+    } as unknown as User;
     jest
       .spyOn(configService, 'get')
       .mockReturnValue('XIAOJU_SURVEY_JWT_SECRET');

@@ -83,6 +83,12 @@ export const fieldConfig = {
     key: 'owner',
     width: 140
   },
+  authorizedAgentsText: {
+    title: '已授权代理',
+    key: 'authorizedAgentsText',
+    minWidth: 220,
+    tip: true
+  },
   updatedAt: {
     title: '更新时间',
     key: 'updatedAt',

@@ -134,7 +134,7 @@ describe('CollaboratorService', () => {
       const result = await service.changeUserPermission({
         userId: '1',
         surveyId: '1',
-        permission: 'read',
+        permissions: [SURVEY_PERMISSION.SURVEY_EDIT_MANAGE],
         operator: 'testOperator',
         operatorId: 'testOperatorId',
       });
@@ -146,7 +146,7 @@ describe('CollaboratorService', () => {
         },
         {
           $set: {
-            permission: 'read',
+            permissions: [SURVEY_PERMISSION.SURVEY_EDIT_MANAGE],
             operator: 'testOperator',
             operatorId: 'testOperatorId',
             updatedAt: expect.any(Date),
@@ -393,13 +393,21 @@ describe('CollaboratorService', () => {
             userId,
             permissions: {
               $elemMatch: {
-                $eq: SURVEY_PERMISSION.SURVEY_COOPERATION_MANAGE,
+                $in: [
+                  SURVEY_PERMISSION.SURVEY_COOPERATION_MANAGE,
+                  SURVEY_PERMISSION.SURVEY_AUTH_MANAGE,
+                ],
               },
             },
           },
         });
         expect(result).toEqual([
-          { _id: '1', surveyId: '1', userId, permissions: [SURVEY_PERMISSION.SURVEY_COOPERATION_MANAGE] },
+          {
+            _id: '1',
+            surveyId: '1',
+            userId,
+            permissions: [SURVEY_PERMISSION.SURVEY_AUTH_MANAGE],
+          },
         ]);
       });
     });

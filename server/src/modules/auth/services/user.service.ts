@@ -119,25 +119,81 @@ export class UserService {
       },
       skip,
       take,
-      select: ['_id', 'username', 'createdAt'],
+      select: ['_id', 'username', 'createdAt', 'role'],
     });
-    return list;
+    return list.map((item) => this.normalizeRole(item));
   }
 
   async getAgentList({ username, skip, take }) {
+    const where: Record<string, any> = {
+      role: USER_ROLE.AGENT,
+    };
+    if (username) {
+      where.username = new RegExp(username);
+    }
+
     const list = await this.userRepository.find({
-      where: {
-        username: new RegExp(username),
-        role: USER_ROLE.AGENT,
-      },
+      where,
       skip,
       take,
-      select: ['_id', 'username', 'createdAt', 'role'],
+      select: [
+        '_id',
+        'username',
+        'createdAt',
+        'role',
+        'lastLoginAt',
+        'lastLoginIp',
+        'lastActiveAt',
+        'lastActiveIp',
+      ],
       order: {
         createdAt: -1,
       },
     });
     return list.map((item) => this.normalizeRole(item));
+  }
+
+  async updateLoginAudit({
+    userId,
+    ip,
+  }: {
+    userId: string;
+    ip: string;
+  }) {
+    const now = new Date();
+    return this.userRepository.updateOne(
+      {
+        _id: new ObjectId(userId),
+      },
+      {
+        $set: {
+          lastLoginAt: now,
+          lastLoginIp: ip,
+          lastActiveAt: now,
+          lastActiveIp: ip,
+        },
+      },
+    );
+  }
+
+  async updateActiveAudit({
+    userId,
+    ip,
+  }: {
+    userId: string;
+    ip: string;
+  }) {
+    return this.userRepository.updateOne(
+      {
+        _id: new ObjectId(userId),
+      },
+      {
+        $set: {
+          lastActiveAt: new Date(),
+          lastActiveIp: ip,
+        },
+      },
+    );
   }
 
   async getUserListByIds({ idList }) {
@@ -147,9 +203,9 @@ export class UserService {
           $in: idList.map((item) => new ObjectId(item)),
         },
       },
-      select: ['_id', 'username', 'createdAt'],
+      select: ['_id', 'username', 'createdAt', 'role'],
     });
-    return list;
+    return list.map((item) => this.normalizeRole(item));
   }
 
   async changePassword({

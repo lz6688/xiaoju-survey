@@ -28,7 +28,7 @@ export const deleteSpace = (workspaceId: string) => {
   return axios.delete(`/workspace/${workspaceId}`)
 }
 
-export const getUserList = (username: string) => {
+export const getUserList = (username = '') => {
   return axios.get(`/user/getUserList`, {
     params: {
       username
@@ -36,7 +36,7 @@ export const getUserList = (username: string) => {
   })
 }
 
-export const getAgentList = (username: string) => {
+export const getAgentList = (username = '') => {
   return axios.get(`/user/getAgentList`, {
     params: {
       username,

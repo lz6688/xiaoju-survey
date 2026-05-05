@@ -55,7 +55,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       needLogin: true,
       allowRoles: ['admin'],
-      permissions: [SurveyPermissions.SurveyManage]
+      permissions: [SurveyPermissions.EditManage]
     },
     name: 'QuestionEdit',
     component: () => import('../pages/edit/index.vue'),
@@ -131,7 +131,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       needLogin: true,
       allowRoles: ['admin', 'agent'],
-      permissions: [SurveyPermissions.DataManage]
+      permissions: [SurveyPermissions.ResponseManage]
     },
     component: () => import('../pages/analysis/AnalysisPage.vue'),
     children: [
@@ -140,7 +140,7 @@ const routes: RouteRecordRaw[] = [
         name: analysisTypeMap.dataTable,
         meta: {
           needLogin: true,
-          premissions: [SurveyPermissions.DataManage]
+          premissions: [SurveyPermissions.ResponseManage]
         },
         component: () => import('../pages/analysis/pages/DataTablePage.vue')
       },
@@ -149,7 +149,7 @@ const routes: RouteRecordRaw[] = [
         name: analysisTypeMap.separateStatistics,
         meta: {
           needLogin: true,
-          premissions: [SurveyPermissions.DataManage]
+          premissions: [SurveyPermissions.ResponseManage]
         },
         component: () => import('../pages/analysis/pages/SeparateStatisticsPage.vue')
       }
@@ -161,7 +161,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       needLogin: true,
       allowRoles: ['admin', 'agent'],
-      permissions: [SurveyPermissions.SurveyManage]
+      permissions: [SurveyPermissions.DeliveryManage]
     },
     component: () => import('../pages/publish/PublishPage.vue')
   },
@@ -171,7 +171,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       needLogin: true,
       allowRoles: ['admin', 'agent'],
-      permissions: [SurveyPermissions.SurveyManage]
+      permissions: [SurveyPermissions.DeliveryManage]
     },
     component: () => import('../pages/publish/ChannelPage.vue')
   },
@@ -280,7 +280,7 @@ async function handlePermissionsGuard(
       if (hasRequiredPermissions(to.meta.permissions as string[], cooperPermissions)) {
         next()
       } else {
-        ElMessage.warning('您没有该问卷的相关协作权限')
+        ElMessage.warning('您没有该问卷的相关授权权限')
         next({ name: role === 'admin' ? 'survey' : 'agentSurvey' })
       }
     } else {

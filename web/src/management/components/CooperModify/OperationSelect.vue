@@ -76,7 +76,7 @@ const handleChange = (val: string | string[]) => {
 }
 const handleClick = () => {
   const text = props.multiple
-    ? '删除协作者后，用户不再有该问卷下的相关权限'
+    ? '删除授权成员后，用户不再有该问卷下的相关权限'
     : '删除团队成员后，该成员不再有团队空间的访问权限'
   ElMessageBox.confirm(text, '是否确认本次删除', {
     confirmButtonText: '确定',

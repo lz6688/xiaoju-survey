@@ -18,7 +18,10 @@ export class ChangeUserPermissionDto {
       userId: Joi.string(),
       permissions: Joi.array().items(
         Joi.string().valid(
+          SURVEY_PERMISSION.SURVEY_EDIT_MANAGE,
+          SURVEY_PERMISSION.SURVEY_DELIVERY_MANAGE,
           SURVEY_PERMISSION.SURVEY_CONF_MANAGE,
+          SURVEY_PERMISSION.SURVEY_AUTH_MANAGE,
           SURVEY_PERMISSION.SURVEY_COOPERATION_MANAGE,
           SURVEY_PERMISSION.SURVEY_RESPONSE_MANAGE,
         ),

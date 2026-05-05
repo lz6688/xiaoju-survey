@@ -30,6 +30,7 @@ import { GetSurveyListDto } from '../dto/getSurveyMetaList.dto';
 import { CollaboratorService } from '../services/collaborator.service';
 import { GROUP_STATE } from 'src/enums/surveyGroup';
 import { USER_ROLE } from 'src/enums/user';
+import { UserService } from 'src/modules/auth/services/user.service';
 
 @ApiTags('survey')
 @Controller('/api/survey')
@@ -39,13 +40,14 @@ export class SurveyMetaController {
     private readonly logger: Logger,
     private readonly collaboratorService: CollaboratorService,
     private readonly workspaceService: WorkspaceService,
+    private readonly userService: UserService,
   ) {}
 
   @Post('/updateMeta')
   @HttpCode(200)
   @UseGuards(SurveyGuard)
   @SetMetadata('surveyId', 'body.surveyId')
-  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_CONF_MANAGE])
+  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_EDIT_MANAGE])
   @UseGuards(Authentication)
   async updateMeta(@Body() reqBody, @Request() req) {
     const { value, error } = Joi.object({
@@ -146,6 +148,34 @@ export class SurveyMetaController {
       surveyIdList,
       isRecycleBin,
     });
+    const surveyIds = data.data.map((item) => item._id.toString());
+    const collaboratorList = surveyIds.length
+      ? await Promise.all(
+          surveyIds.map((surveyId) =>
+            this.collaboratorService.getSurveyCollaboratorList({ surveyId }),
+          ),
+        )
+      : [];
+    const collaboratorMap = collaboratorList.reduce((pre, cur, index) => {
+      pre[surveyIds[index]] = cur;
+      return pre;
+    }, {});
+    const collaboratorUserIds = collaboratorList
+      .flat()
+      .map((item) => item.userId);
+    const legacyAgentIds = data.data
+      .flatMap((item) =>
+        Array.isArray(item.assignedAgentIds) ? item.assignedAgentIds : [],
+      )
+      .filter(Boolean);
+    const uniqueUserIds = [...new Set([...collaboratorUserIds, ...legacyAgentIds])];
+    const userInfoList = uniqueUserIds.length
+      ? await this.userService.getUserListByIds({ idList: uniqueUserIds })
+      : [];
+    const userInfoMap = userInfoList.reduce((pre, cur) => {
+      pre[cur._id.toString()] = cur;
+      return pre;
+    }, {});
     const dataList = data.data.map((item) => {
       const fmt = 'YYYY-MM-DD HH:mm:ss';
       if (!item.surveyType) {
@@ -167,6 +197,23 @@ export class SurveyMetaController {
         item.isCollaborated = false;
         item.currentPermissions = [];
       }
+      const surveyCollaborators = collaboratorMap[surveyId] || [];
+      const collaboratorAgents = surveyCollaborators
+        .filter((collaborator) => userInfoMap[collaborator.userId]?.role === USER_ROLE.AGENT)
+        .map((collaborator) => ({
+          userId: collaborator.userId,
+          username: userInfoMap[collaborator.userId]?.username || '',
+        }));
+      const legacyAgents = (Array.isArray(item.assignedAgentIds) ? item.assignedAgentIds : [])
+        .filter(
+          (agentId) => !collaboratorAgents.some((collaborator) => collaborator.userId === agentId),
+        )
+        .map((agentId) => ({
+          userId: agentId,
+          username: userInfoMap[agentId]?.username || '',
+        }))
+        .filter((agent) => agent.username);
+      item.authorizedAgents = [...collaboratorAgents, ...legacyAgents];
       item.currentUserId = userId;
       return item;
     })

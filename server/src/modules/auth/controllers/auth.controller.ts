@@ -17,6 +17,7 @@ import { EXCEPTION_CODE } from 'src/enums/exceptionCode';
 import { create } from 'svg-captcha';
 import { ApiTags } from '@nestjs/swagger';
 import { Authentication } from 'src/guards/authentication.guard';
+import { getClientIp } from 'src/utils/requestMeta';
 
 const passwordReg = /^[a-zA-Z0-9!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]+$/;
 
@@ -104,6 +105,7 @@ export class AuthController {
       captchaId: string;
       captcha: string;
     },
+    @Request() req?,
   ) {
     const isCorrect = await this.captchaService.checkCaptchaIsCorrect({
       captcha: userInfo.captcha,
@@ -140,6 +142,10 @@ export class AuthController {
         username: user.username,
         _id: user._id.toString(),
         role: user.role,
+      });
+      await this.userService.updateLoginAudit({
+        userId: user._id.toString(),
+        ip: getClientIp(req),
       });
       // 验证过的验证码要删掉，防止被别人保存重复调用
       this.captchaService.deleteCaptcha(userInfo.captchaId);

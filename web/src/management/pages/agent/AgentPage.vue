@@ -17,6 +17,26 @@
             代理
           </template>
         </el-table-column>
+        <el-table-column prop="lastLoginAt" label="最近登录时间" min-width="180">
+          <template #default="{ row }">
+            {{ row.lastLoginAt || '--' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="lastLoginIp" label="最近登录IP" min-width="140">
+          <template #default="{ row }">
+            {{ row.lastLoginIp || '--' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="lastActiveAt" label="最近访问时间" min-width="180">
+          <template #default="{ row }">
+            {{ row.lastActiveAt || '--' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="lastActiveIp" label="最近访问IP" min-width="140">
+          <template #default="{ row }">
+            {{ row.lastActiveIp || '--' }}
+          </template>
+        </el-table-column>
       </el-table>
     </div>
 
@@ -54,8 +74,8 @@ const formData = reactive({
   password: ''
 })
 
-const fetchAgents = async () => {
-  const res: any = await getAgentList(keyword.value)
+const fetchAgents = async (searchKeyword = keyword.value) => {
+  const res: any = await getAgentList(searchKeyword)
   if (res.code === CODE_MAP.SUCCESS) {
     agentList.value = res.data || []
   }
@@ -74,7 +94,8 @@ const handleCreate = () => {
         showDialog.value = false
         formData.username = ''
         formData.password = ''
-        fetchAgents()
+        keyword.value = ''
+        fetchAgents('')
       } else {
         ElMessage.error(res.errmsg || '代理创建失败')
       }
@@ -84,7 +105,7 @@ const handleCreate = () => {
   })
 }
 
-onMounted(fetchAgents)
+onMounted(() => fetchAgents(''))
 </script>
 
 <style lang="scss" scoped>

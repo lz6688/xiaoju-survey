@@ -330,8 +330,18 @@ describe('UserService', () => {
   it('should return a list of users by username', async () => {
     const username = 'test';
     const userList = [
-      { _id: new ObjectId(), username: 'testUser1', createdAt: new Date() },
-      { _id: new ObjectId(), username: 'testUser2', createdAt: new Date() },
+      {
+        _id: new ObjectId(),
+        username: 'testUser1',
+        createdAt: new Date(),
+        role: USER_ROLE.AGENT,
+      },
+      {
+        _id: new ObjectId(),
+        username: 'testUser2',
+        createdAt: new Date(),
+        role: USER_ROLE.ADMIN,
+      },
     ];
 
     jest
@@ -350,7 +360,7 @@ describe('UserService', () => {
       },
       skip: 0,
       take: 10,
-      select: ['_id', 'username', 'createdAt'],
+      select: ['_id', 'username', 'createdAt', 'role'],
     });
     expect(result).toEqual(userList);
   });
@@ -383,12 +393,96 @@ describe('UserService', () => {
       },
       skip: 0,
       take: 10,
-      select: ['_id', 'username', 'createdAt', 'role'],
+      select: [
+        '_id',
+        'username',
+        'createdAt',
+        'role',
+        'lastLoginAt',
+        'lastLoginIp',
+        'lastActiveAt',
+        'lastActiveIp',
+      ],
       order: {
         createdAt: -1,
       },
     });
     expect(result).toEqual(userList);
+  });
+
+  it('should return all agent users when username is empty', async () => {
+    jest.spyOn(userRepository, 'find').mockResolvedValue([]);
+
+    await service.getAgentList({
+      username: '',
+      skip: 0,
+      take: 10,
+    });
+
+    expect(userRepository.find).toHaveBeenCalledWith({
+      where: {
+        role: USER_ROLE.AGENT,
+      },
+      skip: 0,
+      take: 10,
+      select: [
+        '_id',
+        'username',
+        'createdAt',
+        'role',
+        'lastLoginAt',
+        'lastLoginIp',
+        'lastActiveAt',
+        'lastActiveIp',
+      ],
+      order: {
+        createdAt: -1,
+      },
+    });
+  });
+
+  it('should update login audit fields', async () => {
+    const userId = new ObjectId().toString();
+
+    await service.updateLoginAudit({
+      userId,
+      ip: '203.0.113.7',
+    });
+
+    expect(userRepository.updateOne).toHaveBeenCalledWith(
+      {
+        _id: new ObjectId(userId),
+      },
+      {
+        $set: {
+          lastLoginIp: '203.0.113.7',
+          lastActiveIp: '203.0.113.7',
+          lastLoginAt: expect.any(Date),
+          lastActiveAt: expect.any(Date),
+        },
+      },
+    );
+  });
+
+  it('should update active audit fields', async () => {
+    const userId = new ObjectId().toString();
+
+    await service.updateActiveAudit({
+      userId,
+      ip: '203.0.113.8',
+    });
+
+    expect(userRepository.updateOne).toHaveBeenCalledWith(
+      {
+        _id: new ObjectId(userId),
+      },
+      {
+        $set: {
+          lastActiveIp: '203.0.113.8',
+          lastActiveAt: expect.any(Date),
+        },
+      },
+    );
   });
 
   it('should return a list of users by ids', async () => {
@@ -398,11 +492,13 @@ describe('UserService', () => {
         _id: new ObjectId(idList[0]),
         username: 'testUser1',
         createdAt: new Date(),
+        role: USER_ROLE.AGENT,
       },
       {
         _id: new ObjectId(idList[1]),
         username: 'testUser2',
         createdAt: new Date(),
+        role: USER_ROLE.ADMIN,
       },
     ];
 
@@ -418,7 +514,7 @@ describe('UserService', () => {
           $in: idList.map((id) => new ObjectId(id)),
         },
       },
-      select: ['_id', 'username', 'createdAt'],
+      select: ['_id', 'username', 'createdAt', 'role'],
     });
     expect(result).toEqual(userList);
   });

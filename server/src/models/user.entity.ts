@@ -11,4 +11,16 @@ export class User extends BaseEntity {
 
   @Column()
   role: USER_ROLE;
+
+  @Column()
+  lastLoginAt: Date;
+
+  @Column()
+  lastLoginIp: string;
+
+  @Column()
+  lastActiveAt: Date;
+
+  @Column()
+  lastActiveIp: string;
 }

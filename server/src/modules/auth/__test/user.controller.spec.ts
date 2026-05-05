@@ -22,6 +22,7 @@ describe('UserController', () => {
             getUserListByUsername: jest.fn(),
             getAgentList: jest.fn(),
             createAgent: jest.fn(),
+            updateActiveAudit: jest.fn(),
           },
         },
       ],
@@ -37,8 +38,8 @@ describe('UserController', () => {
   describe('getUserList', () => {
     it('should return a list of users', async () => {
       const mockUserList = [
-        { _id: '1', username: 'user1' },
-        { _id: '2', username: 'user2' },
+        { _id: '1', username: 'user1', role: USER_ROLE.AGENT },
+        { _id: '2', username: 'user2', role: USER_ROLE.ADMIN },
       ];
 
       jest
@@ -61,6 +62,7 @@ describe('UserController', () => {
         data: mockUserList.map((item) => ({
           userId: item._id,
           username: item.username,
+          role: item.role,
         })),
       });
     });
@@ -136,7 +138,7 @@ describe('UserController', () => {
     it('should return agent account list', async () => {
       const agentId = '60c72b2f9b1e8a5f4b123456';
       const queryInfo: GetUserListDto = {
-        username: 'agent',
+        username: '',
         pageIndex: 1,
         pageSize: 10,
       };
@@ -148,13 +150,17 @@ describe('UserController', () => {
           _id: agentId,
           username: 'agentUser',
           role: USER_ROLE.AGENT,
+          lastLoginAt: new Date('2026-05-05T09:00:00.000Z'),
+          lastLoginIp: '203.0.113.7',
+          lastActiveAt: new Date('2026-05-05T09:30:00.000Z'),
+          lastActiveIp: '203.0.113.8',
         } as unknown as User,
       ]);
 
       const result = await userController.getAgentList(queryInfo);
 
       expect(userService.getAgentList).toHaveBeenCalledWith({
-        username: 'agent',
+        username: '',
         skip: 0,
         take: 10,
       });
@@ -165,6 +171,10 @@ describe('UserController', () => {
             userId: agentId,
             username: 'agentUser',
             role: USER_ROLE.AGENT,
+            lastLoginAt: new Date('2026-05-05T09:00:00.000Z'),
+            lastLoginIp: '203.0.113.7',
+            lastActiveAt: new Date('2026-05-05T09:30:00.000Z'),
+            lastActiveIp: '203.0.113.8',
           },
         ],
       });

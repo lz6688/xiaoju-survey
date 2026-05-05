@@ -17,6 +17,7 @@ import {
 import { BatchSaveCollaboratorDto } from '../dto/batchSaveCollaborator.dto';
 import { User } from 'src/models/user.entity';
 import { SurveyMeta } from 'src/models/surveyMeta.entity';
+import { USER_ROLE } from 'src/enums/user';
 
 jest.mock('src/guards/authentication.guard');
 jest.mock('src/guards/survey.guard');
@@ -42,6 +43,26 @@ describe('CollaboratorController', () => {
             changeUserPermission: jest.fn(),
             deleteCollaborator: jest.fn(),
             getCollaborator: jest.fn(),
+            normalizePermissions: jest.fn((permissions: string[] = []) => {
+              const mapped = new Set<string>();
+              permissions.forEach((permission) => {
+                if (permission === SURVEY_PERMISSION.SURVEY_CONF_MANAGE) {
+                  mapped.add(SURVEY_PERMISSION.SURVEY_EDIT_MANAGE);
+                  mapped.add(SURVEY_PERMISSION.SURVEY_DELIVERY_MANAGE);
+                } else if (
+                  permission === SURVEY_PERMISSION.SURVEY_COOPERATION_MANAGE
+                ) {
+                  mapped.add(SURVEY_PERMISSION.SURVEY_AUTH_MANAGE);
+                } else {
+                  mapped.add(permission);
+                }
+              });
+              return Array.from(mapped);
+            }),
+            getDefaultAgentPermissions: jest.fn(() => [
+              SURVEY_PERMISSION.SURVEY_DELIVERY_MANAGE,
+              SURVEY_PERMISSION.SURVEY_RESPONSE_MANAGE,
+            ]),
             batchDeleteBySurveyId: jest.fn(),
             batchCreate: jest.fn(),
             batchDelete: jest.fn(),
@@ -194,18 +215,34 @@ describe('CollaboratorController', () => {
       const result = [
         { _id: 'collaboratorId', userId: 'userId', username: '' },
       ];
+      const userList = [
+        {
+          _id: new ObjectId('60c72b2f9b1e8a5f4b123456'),
+          username: 'agent-user',
+          role: USER_ROLE.AGENT,
+        },
+      ];
+      result[0].userId = userList[0]._id.toString();
 
       jest
         .spyOn(collaboratorService, 'getSurveyCollaboratorList')
         .mockResolvedValue(result as unknown as Array<Collaborator>);
 
-      jest.spyOn(userService, 'getUserListByIds').mockResolvedValueOnce([]);
+      jest
+        .spyOn(userService, 'getUserListByIds')
+        .mockResolvedValueOnce(userList as any);
 
       const response = await controller.getSurveyCollaboratorList(query);
 
       expect(response).toEqual({
         code: 200,
-        data: result,
+        data: [
+          {
+            ...result[0],
+            username: 'agent-user',
+            role: USER_ROLE.AGENT,
+          },
+        ],
       });
     });
 
@@ -285,8 +322,13 @@ describe('CollaboratorController', () => {
 
   // 新增的测试方法
   describe('getPermissionList', () => {
-    it('should return the permission list', async () => {
-      const result = Object.values(SURVEY_PERMISSION_DESCRIPTION);
+    it('should return only the active authorization permissions', async () => {
+      const result = [
+        SURVEY_PERMISSION_DESCRIPTION.surveyEditManage,
+        SURVEY_PERMISSION_DESCRIPTION.surveyDeliveryManage,
+        SURVEY_PERMISSION_DESCRIPTION.surveyAuthManage,
+        SURVEY_PERMISSION_DESCRIPTION.surveyResponseManage,
+      ];
 
       const response = await controller.getPermissionList();
 
@@ -391,9 +433,10 @@ describe('CollaboratorController', () => {
         data: {
           isOwner: true,
           permissions: [
-            SURVEY_PERMISSION.SURVEY_COOPERATION_MANAGE,
+            SURVEY_PERMISSION.SURVEY_AUTH_MANAGE,
+            SURVEY_PERMISSION.SURVEY_DELIVERY_MANAGE,
+            SURVEY_PERMISSION.SURVEY_EDIT_MANAGE,
             SURVEY_PERMISSION.SURVEY_RESPONSE_MANAGE,
-            SURVEY_PERMISSION.SURVEY_CONF_MANAGE,
           ],
         },
       });
@@ -422,15 +465,16 @@ describe('CollaboratorController', () => {
         data: {
           isOwner: false,
           permissions: [
-            SURVEY_PERMISSION.SURVEY_COOPERATION_MANAGE,
+            SURVEY_PERMISSION.SURVEY_AUTH_MANAGE,
+            SURVEY_PERMISSION.SURVEY_DELIVERY_MANAGE,
+            SURVEY_PERMISSION.SURVEY_EDIT_MANAGE,
             SURVEY_PERMISSION.SURVEY_RESPONSE_MANAGE,
-            SURVEY_PERMISSION.SURVEY_CONF_MANAGE,
           ],
         },
       });
     });
 
-    it('should return collaborator permissions if user is a collaborator', async () => {
+    it('should return normalized collaborator permissions if user is a collaborator', async () => {
       const req = {
         user: { _id: new ObjectId(), username: 'user' },
       };
@@ -441,7 +485,7 @@ describe('CollaboratorController', () => {
         workspaceId: 'workspaceId',
       };
       const collaborator = {
-        permissions: ['read', 'write'],
+        permissions: [SURVEY_PERMISSION.SURVEY_CONF_MANAGE],
       };
 
       jest
@@ -458,7 +502,44 @@ describe('CollaboratorController', () => {
         code: 200,
         data: {
           isOwner: false,
-          permissions: collaborator.permissions,
+          permissions: [
+            SURVEY_PERMISSION.SURVEY_EDIT_MANAGE,
+            SURVEY_PERMISSION.SURVEY_DELIVERY_MANAGE,
+          ],
+        },
+      });
+    });
+
+    it('should return default agent permissions for legacy assigned agents without collaborator record', async () => {
+      const req = {
+        user: { _id: new ObjectId(), username: 'agent', role: 'agent' },
+      };
+      const query = { surveyId: 'surveyId' };
+      const surveyMeta = {
+        ownerId: 'ownerId',
+        owner: 'owner',
+        workspaceId: null,
+        assignedAgentIds: [req.user._id.toString()],
+      };
+
+      jest
+        .spyOn(surveyMetaService, 'getSurveyById')
+        .mockResolvedValue(surveyMeta as SurveyMeta);
+      jest.spyOn(workspaceMemberServie, 'findOne').mockResolvedValue(null);
+      jest
+        .spyOn(collaboratorService, 'getCollaborator')
+        .mockResolvedValue(null);
+
+      const response = await controller.getUserSurveyPermissions(req, query);
+
+      expect(response).toEqual({
+        code: 200,
+        data: {
+          isOwner: false,
+          permissions: [
+            SURVEY_PERMISSION.SURVEY_DELIVERY_MANAGE,
+            SURVEY_PERMISSION.SURVEY_RESPONSE_MANAGE,
+          ],
         },
       });
     });

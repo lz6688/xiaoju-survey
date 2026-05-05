@@ -14,11 +14,37 @@ export class CollaboratorService {
     private readonly logger: Logger,
   ) {}
 
+  normalizePermissions(permissions: Array<string> = []) {
+    const permissionSet = new Set<string>();
+
+    for (const permission of permissions) {
+      if (permission === SURVEY_PERMISSION.SURVEY_CONF_MANAGE) {
+        permissionSet.add(SURVEY_PERMISSION.SURVEY_EDIT_MANAGE);
+        permissionSet.add(SURVEY_PERMISSION.SURVEY_DELIVERY_MANAGE);
+        continue;
+      }
+      if (permission === SURVEY_PERMISSION.SURVEY_COOPERATION_MANAGE) {
+        permissionSet.add(SURVEY_PERMISSION.SURVEY_AUTH_MANAGE);
+        continue;
+      }
+      permissionSet.add(permission);
+    }
+
+    return Array.from(permissionSet);
+  }
+
+  getDefaultAgentPermissions() {
+    return [
+      SURVEY_PERMISSION.SURVEY_DELIVERY_MANAGE,
+      SURVEY_PERMISSION.SURVEY_RESPONSE_MANAGE,
+    ];
+  }
+
   async create({ surveyId, userId, permissions }) {
     const collaborator = this.collaboratorRepository.create({
       surveyId,
       userId,
-      permissions,
+      permissions: this.normalizePermissions(permissions),
     });
     return this.collaboratorRepository.save(collaborator);
   }
@@ -29,6 +55,7 @@ export class CollaboratorService {
       collaboratorList.map((item) => {
         return {
           ...item,
+          permissions: this.normalizePermissions(item.permissions),
           surveyId,
           createdAt: now,
           updatedAt: now,
@@ -44,7 +71,10 @@ export class CollaboratorService {
     const list = await this.collaboratorRepository.find({
       surveyId,
     });
-    return list;
+    return list.map((item) => ({
+      ...item,
+      permissions: this.normalizePermissions(item.permissions),
+    }));
   }
 
   async getCollaboratorListByIds({ idList }) {
@@ -63,13 +93,18 @@ export class CollaboratorService {
         userId,
       },
     });
+    if (!info) {
+      return info;
+    }
+
+    info.permissions = this.normalizePermissions(info.permissions);
     return info;
   }
 
   async changeUserPermission({
     userId,
     surveyId,
-    permission,
+    permissions,
     operator,
     operatorId,
   }) {
@@ -80,7 +115,7 @@ export class CollaboratorService {
       },
       {
         $set: {
-          permission,
+          permissions: this.normalizePermissions(permissions),
           operator,
           operatorId,
           updatedAt: new Date(),
@@ -156,7 +191,7 @@ export class CollaboratorService {
       },
       {
         $set: {
-          permissions,
+          permissions: this.normalizePermissions(permissions),
           operator,
           operatorId,
           updatedAt: new Date(),
@@ -170,7 +205,12 @@ export class CollaboratorService {
       where: {
         userId,
       },
-    });
+    }).then((list) =>
+      list.map((item) => ({
+        ...item,
+        permissions: this.normalizePermissions(item.permissions),
+      })),
+    );
   }
 
   getManageListByUserId({ userId }) {
@@ -179,10 +219,18 @@ export class CollaboratorService {
         userId,
         permissions: {
           $elemMatch: {
-            $eq: SURVEY_PERMISSION.SURVEY_COOPERATION_MANAGE,
+            $in: [
+              SURVEY_PERMISSION.SURVEY_COOPERATION_MANAGE,
+              SURVEY_PERMISSION.SURVEY_AUTH_MANAGE,
+            ],
           },
         },
       },
-    });
+    }).then((list) =>
+      list.map((item) => ({
+        ...item,
+        permissions: this.normalizePermissions(item.permissions),
+      })),
+    );
   }
 }

@@ -13,6 +13,7 @@ import { RECORD_STATUS } from 'src/enums';
 import { PluginManagerProvider } from 'src/securityPlugin/pluginManager.provider';
 import { PluginManager } from 'src/securityPlugin/pluginManager';
 import { ResponseSecurityPlugin } from 'src/securityPlugin/responseSecurityPlugin';
+import { USER_ROLE } from 'src/enums/user';
 
 describe('DataStatisticService', () => {
   let service: DataStatisticService;
@@ -310,6 +311,83 @@ describe('DataStatisticService', () => {
             diffTime: expect.any(String),
           }),
         ]),
+      );
+    });
+
+    it('should filter agent data by owned channel ids and append source fields for admin', async () => {
+      const surveyId = '65afc62904d5db18534c0f78';
+      const pageNum = 1;
+      const pageSize = 10;
+      const responseSchema = mockResponseSchema;
+      const surveyResponseList = [
+        {
+          _id: new ObjectId('65f1baff92862d6a9067ad0c'),
+          pageId: surveyId,
+          surveyPath: 'JgMLGInV',
+          channelId: 'channel-agent-1',
+          data: {
+            data458: '111',
+          },
+          diffTime: 21278,
+          clientTime: 1710340862733.0,
+          ip: '203.0.113.7',
+          ipLocation: '北京市',
+          ipIsp: '电信',
+          createdAt: 1710340863123.0,
+          updatedAt: 1710340863123.0,
+        },
+      ] as unknown as Array<SurveyResponse>;
+
+      jest
+        .spyOn(surveyResponseRepository, 'findAndCount')
+        .mockResolvedValue([surveyResponseList, 1]);
+
+      const result = await service.getDataTable({
+        surveyId,
+        pageNum,
+        pageSize,
+        responseSchema,
+        role: USER_ROLE.ADMIN,
+        channelIds: ['channel-agent-1'],
+        channelMetaMap: {
+          'channel-agent-1': {
+            channelName: '代理专属链接',
+            agentUsername: 'agentA',
+          },
+        },
+      });
+
+      expect(surveyResponseRepository.findAndCount).toHaveBeenCalledWith({
+        where: {
+          pageId: surveyId,
+          channelId: {
+            $in: ['channel-agent-1'],
+          },
+          isDeleted: {
+            $ne: true,
+          },
+        },
+        take: pageSize,
+        skip: 0,
+        order: {
+          createdAt: -1,
+        },
+      });
+      expect(result.listHead).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ field: 'agentUsername', title: '问卷来源' }),
+        ]),
+      );
+      expect(result.listHead).not.toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ field: 'channelName' }),
+        ]),
+      );
+      expect(result.listBody[0]).toEqual(
+        expect.objectContaining({
+          channelId: 'channel-agent-1',
+          agentUsername: 'agentA',
+        }),
       );
     });
   });

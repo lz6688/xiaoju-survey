@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ObjectId } from 'mongodb';
 import { cloneDeep } from 'lodash';
+import { createHash } from 'crypto';
 
 import { mockResponseSchema } from './mockResponseSchema';
 
@@ -33,6 +34,26 @@ import { getRequestMeta } from 'src/utils/requestMeta';
 jest.mock('src/utils/requestMeta', () => ({
   getRequestMeta: jest.fn(),
 }));
+
+const buildSignedPayload = (payload: Record<string, any>) => {
+  const ts = '1710400229589';
+  const data = cloneDeep(payload);
+  delete data.sign;
+  const keysArr = Object.keys(data).sort();
+  const signSource = keysArr
+    .map((key) => {
+      if (typeof data[key] === 'string') {
+        return `${key}=${encodeURIComponent(data[key])}`;
+      }
+      return `${key}=${JSON.stringify(data[key])}`;
+    })
+    .join('');
+  const sign = createHash('sha256').update(signSource + ts).digest('hex');
+  return {
+    ...payload,
+    sign: `${sign}.${ts}`,
+  };
+};
 
 const mockDecryptErrorBody = {
   surveyPath: 'EBzdmnSp',
@@ -333,6 +354,38 @@ describe('SurveyResponseController', () => {
           ip: '113.118.113.77',
           ipLocation: '中国广东省深圳市',
           ipIsp: '电信',
+        }),
+      );
+    });
+
+    it('should persist channelId when normal render submit includes channelId', async () => {
+      const reqBody = buildSignedPayload({
+        ...cloneDeep(mockSubmitData),
+        channelId: '67cecfb37b4d3ae83aea1bdb',
+      });
+
+      jest
+        .spyOn(responseSchemaService, 'getResponseSchemaByPath')
+        .mockResolvedValueOnce(mockResponseSchema);
+      jest
+        .spyOn(surveyResponseService, 'getSurveyResponseTotalByPath')
+        .mockResolvedValueOnce(0);
+      jest
+        .spyOn(surveyResponseService, 'createSurveyResponse')
+        .mockResolvedValueOnce({
+          _id: new ObjectId('65fc2dd77f4520858046e129'),
+          data: {},
+          optionTextAndId: {},
+        } as SurveyResponse);
+      jest
+        .spyOn(clientEncryptService, 'deleteEncryptInfo')
+        .mockResolvedValueOnce(undefined);
+
+      await controller.createResponse(reqBody);
+
+      expect(surveyResponseService.createSurveyResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          channelId: '67cecfb37b4d3ae83aea1bdb',
         }),
       );
     });

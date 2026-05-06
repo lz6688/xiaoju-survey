@@ -14,6 +14,14 @@ export const getChannelList = (params: any) => {
   })
 }
 
+export const getFixedAgentChannel = (surveyId: string) => {
+  return axios.get('/channel/fixed', {
+    params: {
+      surveyId
+    }
+  })
+}
+
 export const deleteChannel = ({ channelId, surveyId }: any) => {
   return axios.post('/channel/delete', { channelId, surveyId })
 }

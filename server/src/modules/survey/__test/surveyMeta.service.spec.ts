@@ -8,6 +8,7 @@ import { HttpException } from 'src/exceptions/httpException';
 import { RECORD_STATUS, RECORD_SUB_STATUS } from 'src/enums';
 import { ObjectId } from 'mongodb';
 import { USER_ROLE } from 'src/enums/user';
+import { GROUP_STATE } from 'src/enums/surveyGroup';
 
 describe('SurveyMetaService', () => {
   let service: SurveyMetaService;
@@ -147,6 +148,54 @@ describe('SurveyMetaService', () => {
       expect(survey.operatorId).toBe(operatorId);
       expect(surveyRepository.save).toHaveBeenCalledWith(survey);
       expect(result).toEqual(survey);
+    });
+  });
+
+  describe('updateSurveyBaseInfo', () => {
+    it('should update base info without changing published status', async () => {
+      const survey = new SurveyMeta();
+      const publishedAt = Date.now() - 1000;
+      survey.title = '旧标题';
+      survey.remark = '旧备注';
+      survey.groupId = 'old-group';
+      survey.curStatus = {
+        status: RECORD_STATUS.PUBLISHED,
+        date: publishedAt,
+      };
+      survey.statusList = [
+        {
+          status: RECORD_STATUS.PUBLISHED,
+          date: publishedAt,
+        },
+      ];
+
+      jest.spyOn(surveyRepository, 'save').mockResolvedValue(survey);
+
+      const result = await service.updateSurveyBaseInfo({
+        survey,
+        title: '新标题',
+        remark: '新备注',
+        groupId: 'new-group',
+        operator: 'editor',
+        operatorId: 'editor-id',
+      });
+
+      expect(result.curStatus).toEqual({
+        status: RECORD_STATUS.PUBLISHED,
+        date: publishedAt,
+      });
+      expect(result.statusList).toEqual([
+        {
+          status: RECORD_STATUS.PUBLISHED,
+          date: publishedAt,
+        },
+      ]);
+      expect(result.title).toBe('新标题');
+      expect(result.remark).toBe('新备注');
+      expect(result.groupId).toBe('new-group');
+      expect(result.operator).toBe('editor');
+      expect(result.operatorId).toBe('editor-id');
+      expect(surveyRepository.save).toHaveBeenCalledWith(survey);
     });
   });
 
@@ -339,6 +388,81 @@ describe('SurveyMetaService', () => {
               },
             ],
           },
+        }),
+      );
+    });
+
+    it('should apply concrete groupId for admin personal surveys', async () => {
+      jest
+        .spyOn(surveyRepository, 'findAndCount')
+        .mockResolvedValue([[], 0]);
+
+      await service.getSurveyMetaList({
+        pageNum: 1,
+        pageSize: 10,
+        username: 'admin',
+        userId: 'admin-user-id',
+        role: USER_ROLE.ADMIN,
+        filter: {},
+        order: {},
+        groupId: 'group-1',
+      });
+
+      expect(surveyRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            groupId: 'group-1',
+            $and: [
+              {
+                workspaceId: { $exists: false },
+              },
+              {
+                workspaceId: null,
+              },
+            ],
+          }),
+        }),
+      );
+    });
+
+    it('should map unclassified group to empty group query for admin personal surveys', async () => {
+      jest
+        .spyOn(surveyRepository, 'findAndCount')
+        .mockResolvedValue([[], 0]);
+
+      await service.getSurveyMetaList({
+        pageNum: 1,
+        pageSize: 10,
+        username: 'admin',
+        userId: 'admin-user-id',
+        role: USER_ROLE.ADMIN,
+        filter: {},
+        order: {},
+        groupId: GROUP_STATE.UNCLASSIFIED,
+      });
+
+      expect(surveyRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            $or: expect.arrayContaining([
+              {
+                groupId: {
+                  $exists: false,
+                },
+              },
+              {
+                groupId: null,
+              },
+            ]),
+            $and: [
+              {
+                workspaceId: { $exists: false },
+              },
+              {
+                workspaceId: null,
+              },
+            ],
+          }),
         }),
       );
     });

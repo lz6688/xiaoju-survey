@@ -28,6 +28,7 @@ describe('SurveyMetaController', () => {
           provide: SurveyMetaService,
       useValue: {
         editSurveyMeta: jest.fn().mockResolvedValue(undefined),
+        updateSurveyBaseInfo: jest.fn().mockResolvedValue(undefined),
         assignAgents: jest.fn().mockResolvedValue(undefined),
         getSurveyMetaList: jest
           .fn()
@@ -93,14 +94,13 @@ describe('SurveyMetaController', () => {
 
     const result = await controller.updateMeta(reqBody, req);
 
-    expect(surveyMetaService.editSurveyMeta).toHaveBeenCalledWith({
+    expect(surveyMetaService.updateSurveyBaseInfo).toHaveBeenCalledWith({
+      title: reqBody.title,
+      remark: reqBody.remark,
+      groupId: null,
       operator: mockUser.username,
       operatorId: mockUser._id.toString(),
-      survey: {
-        title: reqBody.title,
-        remark: reqBody.remark,
-        groupId: null,
-      },
+      survey,
     });
 
     expect(result).toEqual({ code: 200 });
@@ -121,7 +121,7 @@ describe('SurveyMetaController', () => {
       expect(error.code).toBe(EXCEPTION_CODE.PARAMETER_ERROR);
     }
 
-    expect(surveyMetaService.editSurveyMeta).not.toHaveBeenCalled();
+    expect(surveyMetaService.updateSurveyBaseInfo).not.toHaveBeenCalled();
   });
 
   it('should get survey meta list', async () => {

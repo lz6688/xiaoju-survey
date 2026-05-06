@@ -125,6 +125,30 @@ export class SurveyMetaService {
     return this.surveyRepository.save(survey);
   }
 
+  async updateSurveyBaseInfo({
+    survey,
+    title,
+    remark,
+    groupId,
+    operator,
+    operatorId,
+  }: {
+    survey: SurveyMeta;
+    title: string;
+    remark: string;
+    groupId: string | null;
+    operator: string;
+    operatorId: string;
+  }) {
+    survey.title = title;
+    survey.remark = remark;
+    survey.groupId = groupId;
+    survey.updatedAt = new Date();
+    survey.operator = operator;
+    survey.operatorId = operatorId;
+    return this.surveyRepository.save(survey);
+  }
+
   async deleteSurveyMeta({ surveyId, operator, operatorId }) {
     return this.surveyRepository.updateOne(
       {
@@ -252,15 +276,17 @@ export class SurveyMetaService {
         // 代理仅通过授权记录访问问卷，不再走历史 assignedAgentIds 兜底。
       } else if (workspaceId) {
         otherQuery.workspaceId = workspaceId;
-      } else if (role !== USER_ROLE.ADMIN) {
-        otherQuery.$and = [
-          {
-            workspaceId: { $exists: false },
-          },
-          {
-            workspaceId: null,
-          },
-        ];
+      } else {
+        if (role !== USER_ROLE.ADMIN || (groupId && groupId !== GROUP_STATE.ALL)) {
+          otherQuery.$and = [
+            {
+              workspaceId: { $exists: false },
+            },
+            {
+              workspaceId: null,
+            },
+          ];
+        }
         if (groupId && groupId !== GROUP_STATE.ALL) {
           if (groupId === GROUP_STATE.UNCLASSIFIED) {
             if (!otherQuery.$or) {
@@ -282,18 +308,9 @@ export class SurveyMetaService {
             otherQuery.groupId = groupId;
           }
         }
-        // 引入空间之前，新建的问卷只有owner字段，引入空间之后，新建的问卷多了ownerId字段，使用owenrId字段进行关联更加合理，此处做了兼容
-        // query.$or = [
-        //   {
-        //     owner: username,
-        //   },
-        //   {
-        //     ownerId: userId,
-        //   },
-        // ];
-        otherQuery.ownerId = userId;
-      } else if (workspaceId) {
-        otherQuery.workspaceId = workspaceId;
+        if (role !== USER_ROLE.ADMIN) {
+          otherQuery.ownerId = userId;
+        }
       }
 
       if (Array.isArray(query.$or)) {

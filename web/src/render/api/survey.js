@@ -23,6 +23,10 @@ export const submitForm = (data) => {
   return axios.post('/surveyResponse/createResponse', data)
 }
 
+export const submitFormWithOpen = (data) => {
+  return axios.post('/surveyResponse/createResponseWithOpen', data)
+}
+
 export const queryOptionCountInfo = ({ surveyPath, fieldList }) => {
   return axios.get('/counter/queryOptionCountInfo', {
     params: {

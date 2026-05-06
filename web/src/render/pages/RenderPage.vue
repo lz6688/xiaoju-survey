@@ -23,7 +23,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 // @ts-ignore
 import communalLoader from '@materials/communals/communalLoader.js'
 
@@ -68,6 +68,7 @@ const alert = useCommandComponent(AlertDialog)
 const confirm = useCommandComponent(ConfirmDialog)
 
 const router = useRouter()
+const route = useRoute()
 const surveyStore = useSurveyStore()
 const questionStore = useQuestionStore()
 
@@ -133,7 +134,15 @@ const submitSurvey = async () => {
   }
   try {
     const params = normalizationRequestBody()
-    const res: any = await submitForm(params)
+    const channelId = route.query.channelId as string | undefined
+    const res: any = await submitForm(
+      channelId
+        ? {
+            ...params,
+            channelId
+          }
+        : params
+    )
     if (res.code === 200) {
       router.replace({ name: 'successPage' })
     } else {

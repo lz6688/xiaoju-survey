@@ -15,6 +15,10 @@ import { UserService } from 'src/modules/auth/services/user.service';
 import { ResponseSecurityPlugin } from 'src/securityPlugin/responseSecurityPlugin';
 import { AuthService } from 'src/modules/auth/services/auth.service';
 import { HttpException } from 'src/exceptions/httpException';
+import { USER_ROLE } from 'src/enums/user';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { Channel } from 'src/models/channel.entity';
+import { MongoRepository } from 'typeorm';
 
 jest.mock('../services/dataStatistic.service');
 jest.mock('../services/surveyMeta.service');
@@ -29,6 +33,8 @@ describe('DataStatisticController', () => {
   let responseSchemaService: ResponseSchemaService;
   let pluginManager: PluginManager;
   let logger: Logger;
+  let channelRepository: Pick<MongoRepository<Channel>, 'find'>;
+  let userService: UserService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -40,12 +46,17 @@ describe('DataStatisticController', () => {
         PluginManagerProvider,
         ConfigService,
         {
+          provide: getRepositoryToken(Channel),
+          useValue: {
+            find: jest.fn().mockResolvedValue([]),
+          },
+        },
+        {
           provide: UserService,
-          useClass: jest.fn().mockImplementation(() => ({
-            getUserByUsername() {
-              return {};
-            },
-          })),
+          useValue: {
+            getUserByUsername: jest.fn().mockResolvedValue({}),
+            getUserListByIds: jest.fn().mockResolvedValue([]),
+          },
         },
         {
           provide: AuthService,
@@ -72,6 +83,8 @@ describe('DataStatisticController', () => {
     );
     pluginManager = module.get<PluginManager>(PluginManager);
     logger = module.get<Logger>(Logger);
+    channelRepository = module.get(getRepositoryToken(Channel));
+    userService = module.get<UserService>(UserService);
 
     pluginManager.registerPlugin(
       new ResponseSecurityPlugin('dataAesEncryptSecretKey'),
@@ -109,8 +122,8 @@ describe('DataStatisticController', () => {
           },
         ],
         listBody: [
-          { diffTime: '0.5', createdAt: '2024-02-11' },
-          { diffTime: '0.5', createdAt: '2024-02-11' },
+          { diffTime: '0.5', createdAt: '2024-02-11', ip: '', ipLocation: '', ipIsp: '', channelId: '', agentUsername: '', channelName: '' },
+          { diffTime: '0.5', createdAt: '2024-02-11', ip: '', ipLocation: '', ipIsp: '', channelId: '', agentUsername: '', channelName: '' },
         ],
       };
 
@@ -121,12 +134,18 @@ describe('DataStatisticController', () => {
         .spyOn(dataStatisticService, 'getDataTable')
         .mockResolvedValueOnce(mockDataTable);
 
-      const result = await controller.data(mockRequest.query);
+      const result = await controller.data(mockRequest.query, mockRequest as any);
 
       expect(result).toEqual({
         code: 200,
         data: mockDataTable,
       });
+      expect(dataStatisticService.getDataTable).toHaveBeenCalledWith(
+        expect.objectContaining({
+          role: undefined,
+          channelIds: undefined,
+        }),
+      );
     });
 
     it('should return data table with isMasked', async () => {
@@ -155,8 +174,8 @@ describe('DataStatisticController', () => {
           },
         ],
         listBody: [
-          { diffTime: '0.5', createdAt: '2024-02-11', data123: '15200000000' },
-          { diffTime: '0.5', createdAt: '2024-02-11', data123: '13800000000' },
+          { diffTime: '0.5', createdAt: '2024-02-11', data123: '15200000000', ip: '', ipLocation: '', ipIsp: '', channelId: '', agentUsername: '', channelName: '' },
+          { diffTime: '0.5', createdAt: '2024-02-11', data123: '13800000000', ip: '', ipLocation: '', ipIsp: '', channelId: '', agentUsername: '', channelName: '' },
         ],
       };
 
@@ -167,12 +186,99 @@ describe('DataStatisticController', () => {
         .spyOn(dataStatisticService, 'getDataTable')
         .mockResolvedValueOnce(mockDataTable);
 
-      const result = await controller.data(mockRequest.query);
+      const result = await controller.data(mockRequest.query, mockRequest as any);
 
       expect(result).toEqual({
         code: 200,
         data: mockDataTable,
       });
+    });
+
+    it('should pass agent identity into data table query', async () => {
+      const surveyId = new ObjectId().toString();
+      const mockRequest = {
+        query: {
+          surveyId,
+          isMasked: false,
+          page: 1,
+          pageSize: 10,
+        },
+        user: {
+          _id: new ObjectId().toString(),
+          username: 'agent-user',
+          role: USER_ROLE.AGENT,
+        },
+      };
+
+      jest
+        .spyOn(responseSchemaService, 'getResponseSchemaByPageId')
+        .mockResolvedValueOnce({} as any);
+      jest.spyOn(dataStatisticService, 'getDataTable').mockResolvedValueOnce({
+        total: 0,
+        listHead: [],
+        listBody: [],
+      });
+
+      await controller.data(mockRequest.query, mockRequest as any);
+
+      expect(dataStatisticService.getDataTable).toHaveBeenCalledWith(
+        expect.objectContaining({
+          role: USER_ROLE.AGENT,
+          channelIds: [],
+        }),
+      );
+    });
+
+    it('should map admin owned fixed link source to 管理员', async () => {
+      const surveyId = new ObjectId().toString();
+      const adminId = new ObjectId().toString();
+      const mockRequest = {
+        query: {
+          surveyId,
+          isMasked: false,
+          page: 1,
+          pageSize: 10,
+        },
+        user: {
+          _id: adminId,
+          username: 'admin',
+          role: USER_ROLE.ADMIN,
+        },
+      };
+
+      jest
+        .spyOn(channelRepository, 'find')
+        .mockResolvedValueOnce([
+          {
+            _id: new ObjectId(),
+            ownerId: adminId,
+            name: '管理员专属链接',
+          } as any,
+        ]);
+      jest
+        .spyOn(responseSchemaService, 'getResponseSchemaByPageId')
+        .mockResolvedValueOnce({} as any);
+      jest.spyOn(dataStatisticService, 'getDataTable').mockResolvedValueOnce({
+        total: 0,
+        listHead: [],
+        listBody: [],
+      });
+      jest.spyOn(userService, 'getUserListByIds').mockResolvedValueOnce([
+        {
+          _id: new ObjectId(adminId),
+          username: 'admin',
+          role: USER_ROLE.ADMIN,
+        } as any,
+      ]);
+
+      await controller.data(mockRequest.query, mockRequest as any);
+
+      const callArg = (dataStatisticService.getDataTable as jest.Mock).mock.calls[0][0];
+      expect(Object.values(callArg.channelMetaMap)[0]).toEqual(
+        expect.objectContaining({
+          agentUsername: '管理员',
+        }),
+      );
     });
 
     it('should throw an exception if validation fails', async () => {
@@ -185,7 +291,7 @@ describe('DataStatisticController', () => {
         },
       };
 
-      await expect(controller.data(mockRequest.query)).rejects.toThrow(
+      await expect(controller.data(mockRequest.query, mockRequest as any)).rejects.toThrow(
         HttpException,
       );
       expect(logger.error).toHaveBeenCalledTimes(1);
@@ -617,7 +723,9 @@ describe('DataStatisticController', () => {
         .spyOn(dataStatisticService, 'aggregationStatis')
         .mockResolvedValueOnce(mockAggregationResult);
 
-      const result = await controller.aggregationStatis(mockRequest.query);
+      const result = await controller.aggregationStatis(mockRequest.query, {
+        user: {},
+      } as any);
 
       expect(result).toEqual({
         code: 200,
@@ -633,7 +741,9 @@ describe('DataStatisticController', () => {
       };
 
       await expect(
-        controller.aggregationStatis(mockRequest.query),
+        controller.aggregationStatis(mockRequest.query, {
+          user: {},
+        } as any),
       ).rejects.toThrow(HttpException);
     });
 
@@ -648,7 +758,9 @@ describe('DataStatisticController', () => {
         .spyOn(responseSchemaService, 'getResponseSchemaByPageId')
         .mockResolvedValueOnce(null);
 
-      const result = await controller.aggregationStatis(mockRequest.query);
+      const result = await controller.aggregationStatis(mockRequest.query, {
+        user: {},
+      } as any);
 
       expect(result).toEqual({
         code: 200,

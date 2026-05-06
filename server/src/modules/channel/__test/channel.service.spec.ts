@@ -137,4 +137,69 @@ describe('ChannelService', () => {
       },
     });
   });
+
+  it('should reuse existing fixed agent survey channel', async () => {
+    const surveyId = new ObjectId().toString();
+    const ownerId = new ObjectId().toString();
+    const existingChannel = {
+      _id: new ObjectId(),
+      surveyId,
+      ownerId,
+      name: '代理专属链接',
+      status: CHANNEL_STATUS.RECYCLING,
+    } as Channel;
+
+    jest.spyOn(channelRepository, 'findOne').mockResolvedValue(existingChannel);
+
+    const result = await service.findOrCreateAgentSurveyChannel({
+      surveyId,
+      ownerId,
+    });
+
+    expect(channelRepository.findOne).toHaveBeenCalledWith({
+      where: {
+        surveyId,
+        ownerId,
+        isDeleted: {
+          $ne: true,
+        },
+      },
+      order: {
+        createdAt: 1,
+      },
+    });
+    expect(channelRepository.create).not.toHaveBeenCalled();
+    expect(result).toBe(existingChannel);
+  });
+
+  it('should create fixed agent survey channel when missing', async () => {
+    const surveyId = new ObjectId().toString();
+    const ownerId = new ObjectId().toString();
+    const createdChannel = {
+      surveyId,
+      ownerId,
+      name: '代理专属链接',
+      type: 'inject_app',
+      status: CHANNEL_STATUS.RECYCLING,
+    } as unknown as Channel;
+
+    jest.spyOn(channelRepository, 'findOne').mockResolvedValue(null);
+    jest.spyOn(channelRepository, 'create').mockReturnValue(createdChannel);
+    jest.spyOn(channelRepository, 'save').mockResolvedValue(createdChannel);
+
+    const result = await service.findOrCreateAgentSurveyChannel({
+      surveyId,
+      ownerId,
+    });
+
+    expect(channelRepository.create).toHaveBeenCalledWith({
+      surveyId,
+      ownerId,
+      name: '代理专属链接',
+      type: 'inject_app',
+      status: CHANNEL_STATUS.RECYCLING,
+    });
+    expect(channelRepository.save).toHaveBeenCalledWith(createdChannel);
+    expect(result).toBe(createdChannel);
+  });
 });

@@ -6,6 +6,7 @@ import { ObjectId } from 'mongodb';
 import { Channel } from 'src/models/channel.entity';
 
 import { CHANNEL_STATUS, IDeliverDataItem } from '../../../enums/channel';
+import { CHANNEL_TYPE } from 'src/enums/channel';
 import { HttpException } from 'src/exceptions/httpException';
 import { EXCEPTION_CODE } from 'src/enums/exceptionCode';
 
@@ -32,6 +33,41 @@ export class ChannelService {
     const newChannel = this.channelRepository.create({
       ...channel,
     });
+    return this.channelRepository.save(newChannel);
+  }
+
+  async findOrCreateAgentSurveyChannel({
+    surveyId,
+    ownerId,
+  }: {
+    surveyId: string;
+    ownerId: string;
+  }) {
+    const existingChannel = await this.channelRepository.findOne({
+      where: {
+        surveyId,
+        ownerId,
+        isDeleted: {
+          $ne: true,
+        },
+      },
+      order: {
+        createdAt: 1,
+      },
+    });
+
+    if (existingChannel) {
+      return existingChannel;
+    }
+
+    const newChannel = this.channelRepository.create({
+      surveyId,
+      ownerId,
+      name: '代理专属链接',
+      type: CHANNEL_TYPE.INJECT_APP,
+      status: CHANNEL_STATUS.RECYCLING,
+    });
+
     return this.channelRepository.save(newChannel);
   }
 

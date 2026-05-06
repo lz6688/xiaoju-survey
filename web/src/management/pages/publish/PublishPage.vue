@@ -26,7 +26,9 @@
 </template>
 <script setup lang="ts">
 import { computed, onMounted, toRef } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useEditStore } from '@/management/stores/edit'
+import { useChannelStore } from '@/management/stores/channel'
 import { useUserStore } from '@/management/stores/user'
 import { useRoute, useRouter } from 'vue-router'
 import { get as _get } from 'lodash-es'
@@ -46,8 +48,10 @@ const defaultConfig = {
 }
 
 const editStore = useEditStore()
+const channelStore = useChannelStore()
 const userStore = useUserStore()
 const { schema, init, setSurveyId } = editStore
+const { fixedAgentChannel } = storeToRefs(channelStore)
 const metaData = toRef(schema, 'metaData')
 const curStatus = computed(() => _get(metaData.value, 'curStatus.status', 'new'))
 const homeRouteName = computed(() => (userStore.userInfo?.role === 'admin' ? 'survey' : 'agentSurvey'))
@@ -55,7 +59,11 @@ const mainChannel = computed(() => {
   let fullUrl = ''
 
   if (metaData.value) {
-    fullUrl = `${location.origin}/render/${(metaData.value as any).surveyPath}?t=${Date.now()}`
+    const surveyPath = (metaData.value as any).surveyPath
+    const channelId = fixedAgentChannel.value?._id
+    fullUrl = channelId
+      ? `${location.origin}/render/${surveyPath}?channelId=${channelId}&t=${Date.now()}`
+      : `${location.origin}/render/${surveyPath}?t=${Date.now()}`
   }
 
   return { fullUrl }
@@ -68,6 +76,7 @@ onMounted(async () => {
 
   try {
     await init()
+    await channelStore.getFixedAgentChannel(route.params.id as string)
   } catch (err: any) {
     ElMessage.error(err.message)
     setTimeout(() => {

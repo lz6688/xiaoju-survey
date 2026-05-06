@@ -9,9 +9,6 @@
         <template v-if="curStatus !== 'new'">
           <div class="container-content">
             <div class="box-link">
-              <!-- <span class="launch-tip"
-                >说明：若您的问卷投放对象，涉及14周岁以下的用户，需征得其监护人的同意。</span
-              > -->
               <h2>问卷链接</h2>
               <div class="main-channel-wrap">
                 <ChannelRow
@@ -21,18 +18,10 @@
                 />
               </div>
             </div>
-            
-            <br/>
-            <div class="box-channelList" v-if="channelTotal > 0">
-              <h2>投放列表</h2>
-              <div class="main-channel-wrap">
-                <ChannelList />
-              </div>
-            </div>
-            <div class="box-channelList">
+            <div v-if="userStore.userInfo?.role === 'admin'" class="box-channelList">
               <h2>投放方式</h2>
               <div class="main-channel-wrap">
-                <ChannelCards/>
+                <ChannelCards />
               </div>
             </div>
           </div>
@@ -57,7 +46,6 @@ import 'element-plus/theme-chalk/src/message.scss'
 import EmptyIndex from '@/management/components/EmptyIndex.vue'
 import LeftMenu from '@/management/components/LeftMenu.vue'
 import ChannelRow from './components/ChannelRow.vue'
-import ChannelList from './components/ChannelList.vue'
 import ChannelCards from './components/ChannelCards.vue'
 import Navbar from './components/Navbar.vue'
 
@@ -71,8 +59,7 @@ const editStore = useEditStore()
 const userStore = useUserStore()
 const { schema, init, setSurveyId } = editStore
 
-
-const { channelTotal } = storeToRefs(channelStore)
+const { fixedAgentChannel } = storeToRefs(channelStore)
 const metaData = toRef(schema, 'metaData')
 const curStatus = computed(() => _get(metaData.value, 'curStatus.status', 'new'))
 const homeRouteName = computed(() => (userStore.userInfo?.role === 'admin' ? 'survey' : 'agentSurvey'))
@@ -80,7 +67,11 @@ const mainChannel = computed(() => {
   let fullUrl = ''
 
   if (metaData.value) {
-    fullUrl = `${location.origin}/render/${(metaData.value as any).surveyPath}?t=${Date.now()}`
+    const surveyPath = (metaData.value as any).surveyPath
+    const channelId = fixedAgentChannel.value?._id
+    fullUrl = channelId
+      ? `${location.origin}/render/${surveyPath}?channelId=${channelId}&t=${Date.now()}`
+      : `${location.origin}/render/${surveyPath}?t=${Date.now()}`
   }
 
   return { fullUrl }
@@ -99,10 +90,7 @@ onMounted(async () => {
       router.replace({ name: homeRouteName.value })
     }, 1000)
   }
-  channelStore.getChannelList({
-    surveyId: route.params.id as string,
-    curPage: 1
-  })
+  channelStore.getFixedAgentChannel(route.params.id as string)
 })
 </script>
 <style lang="scss" scoped>

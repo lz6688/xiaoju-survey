@@ -11,6 +11,7 @@ import {
   changeChannelStatus as changeChannelStatusReq,
   deleteChannel as deleteChannelReq,
   getChannelList as getChannelListReq,
+  getFixedAgentChannel as getFixedAgentChannelReq,
 } from '@/management/api/channel'
 import { type IDeliverDataItem } from '@/management/enums/channel'
 
@@ -23,6 +24,7 @@ const { surveyId } = storeToRefs(editStore)
 export const useChannelStore = defineStore('channel', () => {
   const channelList = ref<IDeliverDataItem[]>([])
   const channelTotal = ref(0)
+  const fixedAgentChannel = ref<any>(null)
   async function getChannelList(params = { surveyId: surveyId.value, curPage: 1 }) {
     try {
       const res: any = await getChannelListReq(params)
@@ -36,6 +38,19 @@ export const useChannelStore = defineStore('channel', () => {
       }
     } catch (err) {
       ElMessage.error('getChannelList' + err)
+    }
+  }
+
+  async function getFixedAgentChannel(surveyIdValue = surveyId.value) {
+    try {
+      const res: any = await getFixedAgentChannelReq(surveyIdValue)
+      if (res.code === CODE_MAP.SUCCESS) {
+        fixedAgentChannel.value = res?.data || null
+      } else {
+        ElMessage.error('getFixedAgentChannel' + res.errmsg)
+      }
+    } catch (err) {
+      ElMessage.error('getFixedAgentChannel' + err)
     }
   }
 
@@ -90,7 +105,9 @@ export const useChannelStore = defineStore('channel', () => {
   return {
     channelList,
     channelTotal,
+    fixedAgentChannel,
     getChannelList,
+    getFixedAgentChannel,
     createChannel,
     updateChannel,
     deleteChannel,

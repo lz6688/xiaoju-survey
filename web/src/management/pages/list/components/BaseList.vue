@@ -170,7 +170,7 @@ const props = defineProps({
   }
 })
 const emit = defineEmits(['refresh'])
-const fields = ['type', 'title', 'remark', 'owner', 'authorizedAgentsText', 'state', 'createdAt', 'updatedAt']
+const baseFields = ['type', 'title', 'remark', 'owner', 'state', 'createdAt', 'updatedAt']
 const showModify = ref(false)
 const modifyType = ref('')
 const questionInfo = ref({})
@@ -258,6 +258,9 @@ const currentComponent = computed(() => {
 })
 
 const fieldList = computed(() => {
+  const fields = isAgent.value
+    ? baseFields
+    : ['type', 'title', 'remark', 'owner', 'authorizedAgentsText', 'state', 'createdAt', 'updatedAt']
   return map(fields, (f) => {
     return get(fieldConfig, f, null)
   })

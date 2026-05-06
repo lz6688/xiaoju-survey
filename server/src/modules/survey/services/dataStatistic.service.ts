@@ -9,6 +9,7 @@ import { DataItem } from 'src/interfaces/survey';
 import { ResponseSchema } from 'src/models/responseSchema.entity';
 import { getListHeadByDataList, transformAndMergeArrayFields } from '../utils';
 import { QUESTION_TYPE } from 'src/enums/question';
+import { USER_ROLE } from 'src/enums/user';
 @Injectable()
 export class DataStatisticService {
   private radioType = [QUESTION_TYPE.RADIO_STAR, QUESTION_TYPE.RADIO_NPS];
@@ -23,21 +24,45 @@ export class DataStatisticService {
     pageNum,
     pageSize,
     responseSchema,
+    role,
+    channelIds,
+    channelMetaMap = {},
   }: {
     surveyId: string;
     pageNum: number;
     pageSize: number;
     responseSchema: ResponseSchema;
+    role?: USER_ROLE;
+    channelIds?: string[];
+    channelMetaMap?: Record<
+      string,
+      {
+        channelName?: string;
+        agentUsername?: string;
+      }
+    >;
   }) {
     const dataList = responseSchema?.code?.dataConf?.dataList || [];
     const listHead = getListHeadByDataList(dataList);
+    if (role === USER_ROLE.ADMIN) {
+      listHead.push({
+        field: 'agentUsername',
+        title: '问卷来源',
+        type: QUESTION_TYPE.TEXT,
+      });
+    }
     const dataListMap = keyBy(dataList, 'field');
-    const where = {
+    const where: Record<string, any> = {
       pageId: surveyId,
       isDeleted: {
         $ne: true,
       },
     };
+    if (Array.isArray(channelIds)) {
+      where.channelId = {
+        $in: channelIds,
+      };
+    }
     const [surveyResponseList, total] =
       await this.surveyResponseRepository.findAndCount({
         where,
@@ -105,6 +130,8 @@ export class DataStatisticService {
       }
       return {
         ...data,
+        channelId: submitedData.channelId || '',
+        agentUsername: channelMetaMap[submitedData.channelId]?.agentUsername || '',
         diffTime: submitedData.diffTime
           ? (submitedData.diffTime / 1000).toFixed(2)
           : '0',
@@ -121,7 +148,15 @@ export class DataStatisticService {
     };
   }
 
-  async aggregationStatis({ surveyId, fieldList }) {
+  async aggregationStatis({
+    surveyId,
+    fieldList,
+    channelIds,
+  }: {
+    surveyId: string;
+    fieldList: string[];
+    channelIds?: string[];
+  }) {
     const $facet = fieldList.reduce((pre, cur) => {
       const $match = { $match: { [`data.${cur}`]: { $nin: [[], '', null] } } };
       const $group = { $group: { _id: `$data.${cur}`, count: { $sum: 1 } } };
@@ -137,15 +172,21 @@ export class DataStatisticService {
       pre[cur] = [$match, $group, $project];
       return pre;
     }, {});
+    const match: Record<string, any> = {
+      pageId: surveyId,
+      isDeleted: {
+        $ne: true,
+      },
+    };
+    if (Array.isArray(channelIds)) {
+      match.channelId = {
+        $in: channelIds,
+      };
+    }
     const aggregation = this.surveyResponseRepository.aggregate(
       [
         {
-          $match: {
-            pageId: surveyId,
-            isDeleted: {
-              $ne: true,
-            },
-          },
+          $match: match,
         },
         { $facet },
       ],

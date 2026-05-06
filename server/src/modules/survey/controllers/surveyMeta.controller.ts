@@ -62,13 +62,11 @@ export class SurveyMetaController {
       throw new HttpException('参数错误', EXCEPTION_CODE.PARAMETER_ERROR);
     }
     const survey = req.surveyMeta;
-    survey.title = value.title;
-    survey.remark = value.remark;
-    survey.groupId =
-      value.groupId && value.groupId !== '' ? value.groupId : null;
-
-    await this.surveyMetaService.editSurveyMeta({
+    await this.surveyMetaService.updateSurveyBaseInfo({
       survey,
+      title: value.title,
+      remark: value.remark,
+      groupId: value.groupId && value.groupId !== '' ? value.groupId : null,
       operator: req.user.username,
       operatorId: req.user._id.toString(),
     });

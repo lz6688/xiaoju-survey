@@ -104,6 +104,12 @@ export class ChannelController {
 
     const ownerId =
       req.user.role === USER_ROLE.AGENT ? req.user._id.toString() : undefined;
+    if (req.user.role === USER_ROLE.AGENT) {
+      await this.channelService.findOrCreateAgentSurveyChannel({
+        surveyId: queryInfo.surveyId,
+        ownerId,
+      });
+    }
     // 查询当前问卷的渠道列表
     const channelList = await this.channelService.findAllBySurveyId(
       queryInfo.surveyId,
@@ -149,6 +155,36 @@ export class ChannelController {
           };
         }),
         total,
+      },
+    };
+  }
+
+  @Get('/fixed')
+  @ApiBearerAuth()
+  @UseGuards(Authentication, SurveyGuard)
+  @SetMetadata('surveyId', 'query.surveyId')
+  @SetMetadata('surveyPermission', [SURVEY_PERMISSION.SURVEY_DELIVERY_MANAGE])
+  @SetMetadata('agentAccess', true)
+  @HttpCode(200)
+  async getFixedChannel(@Request() req, @Query('surveyId') surveyId: string) {
+    if (!surveyId) {
+      throw new HttpException('参数有误', EXCEPTION_CODE.PARAMETER_ERROR);
+    }
+    const ownerId = req.user._id.toString();
+    const channel = await this.channelService.findOrCreateAgentSurveyChannel({
+      surveyId,
+      ownerId,
+    });
+
+    return {
+      code: 200,
+      data: {
+        ...channel,
+        fullUrl: `${req.protocol}://${req.get('host')}/render/${(
+          await this.surveyMetaService.getSurveyById({
+            surveyId,
+          })
+        ).surveyPath}?channelId=${channel._id.toString()}`,
       },
     };
   }

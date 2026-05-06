@@ -29,6 +29,7 @@ import { SurveyGroup } from 'src/models/surveyGroup.entity';
 import { Word } from 'src/models/word.entity';
 import { Collaborator } from 'src/models/collaborator.entity';
 import { DownloadTask } from 'src/models/downloadTask.entity';
+import { Channel } from 'src/models/channel.entity';
 
 import { PluginManagerProvider } from 'src/securityPlugin/pluginManager.provider';
 import { DataStatisticService } from './services/dataStatistic.service';
@@ -61,6 +62,7 @@ import { WorkspaceService } from '../workspace/services/workspace.service';
       DownloadTask,
       Session,
       SurveyGroup,
+      Channel,
     ]),
     ConfigModule,
     SurveyResponseModule,

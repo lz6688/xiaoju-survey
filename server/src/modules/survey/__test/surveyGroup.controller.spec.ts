@@ -20,9 +20,12 @@ describe('SurveyGroupController', () => {
     update: jest.fn(),
     remove: jest.fn(),
     findOne: jest.fn(),
+    hasChildren: jest.fn(),
+    isDescendantGroup: jest.fn(),
   };
 
   beforeEach(async () => {
+    jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
       controllers: [SurveyGroupController],
       providers: [
@@ -67,6 +70,7 @@ describe('SurveyGroupController', () => {
         _id: new ObjectId(),
         name: 'Test Group',
         ownerId: '123',
+        parentId: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       }; // 确保这里返回的对象结构符合预期
@@ -88,6 +92,7 @@ describe('SurveyGroupController', () => {
       expect(service.create).toHaveBeenCalledWith({
         name: 'Test Group',
         ownerId: req.user._id.toString(), // 这里用模拟的 req.user._id
+        parentId: null,
       });
     });
   });
@@ -115,7 +120,7 @@ describe('SurveyGroupController', () => {
 
   describe('update', () => {
     it('should update a survey group', async () => {
-      const updatedFields = { name: 'xxx' };
+      const updatedFields = { name: 'xxx', parentId: null };
       const updatedResult = { raw: 'xxx', generatedMaps: [] };
       const id = '1';
       jest.spyOn(service, 'update').mockResolvedValue(updatedResult);
@@ -162,6 +167,7 @@ describe('SurveyGroupController', () => {
       jest.spyOn(service, 'findOne').mockResolvedValueOnce({
         ownerId: mockUser._id.toString(),
       } as SurveyGroup);
+      jest.spyOn(service, 'hasChildren').mockResolvedValue(false);
       jest.spyOn(service, 'remove').mockResolvedValue(undefined);
 
       expect(await controller.remove(req)).toEqual({ code: 200 });

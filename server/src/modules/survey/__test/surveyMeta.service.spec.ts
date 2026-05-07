@@ -9,13 +9,16 @@ import { RECORD_STATUS, RECORD_SUB_STATUS } from 'src/enums';
 import { ObjectId } from 'mongodb';
 import { USER_ROLE } from 'src/enums/user';
 import { GROUP_STATE } from 'src/enums/surveyGroup';
+import { SurveyGroupService } from '../services/surveyGroup.service';
 
 describe('SurveyMetaService', () => {
   let service: SurveyMetaService;
   let surveyRepository: MongoRepository<SurveyMeta>;
   let pluginManager: PluginManager;
+  let surveyGroupService: SurveyGroupService;
 
   beforeEach(async () => {
+    jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SurveyMetaService,
@@ -32,6 +35,12 @@ describe('SurveyMetaService', () => {
           },
         },
         PluginManager,
+        {
+          provide: SurveyGroupService,
+          useValue: {
+            getGroupAndDescendantIds: jest.fn().mockResolvedValue([]),
+          },
+        },
       ],
     }).compile();
 
@@ -40,6 +49,7 @@ describe('SurveyMetaService', () => {
       getRepositoryToken(SurveyMeta),
     );
     pluginManager = module.get<PluginManager>(PluginManager);
+    surveyGroupService = module.get<SurveyGroupService>(SurveyGroupService);
   });
 
   describe('getNewSurveyPath', () => {
@@ -396,6 +406,9 @@ describe('SurveyMetaService', () => {
       jest
         .spyOn(surveyRepository, 'findAndCount')
         .mockResolvedValue([[], 0]);
+      jest
+        .spyOn(surveyGroupService, 'getGroupAndDescendantIds')
+        .mockResolvedValue(['group-1', 'group-1-1']);
 
       await service.getSurveyMetaList({
         pageNum: 1,
@@ -411,7 +424,9 @@ describe('SurveyMetaService', () => {
       expect(surveyRepository.findAndCount).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            groupId: 'group-1',
+            groupId: {
+              $in: ['group-1', 'group-1-1'],
+            },
             $and: [
               {
                 workspaceId: { $exists: false },
@@ -421,6 +436,26 @@ describe('SurveyMetaService', () => {
               },
             ],
           }),
+        }),
+      );
+    });
+
+    it('should include descendant group ids in personal group count query', async () => {
+      jest.spyOn(surveyRepository, 'count').mockResolvedValue(0);
+      jest
+        .spyOn(surveyGroupService, 'getGroupAndDescendantIds')
+        .mockResolvedValue(['group-1', 'group-1-1']);
+
+      await service.countSurveyMetaByGroupId({
+        userId: 'admin-user-id',
+        groupId: 'group-1',
+      });
+
+      expect(surveyRepository.count).toHaveBeenCalledWith(
+        expect.objectContaining({
+          groupId: {
+            $in: ['group-1', 'group-1-1'],
+          },
         }),
       );
     });

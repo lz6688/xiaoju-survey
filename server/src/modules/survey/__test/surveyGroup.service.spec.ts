@@ -12,6 +12,7 @@ describe('SurveyGroupService', () => {
     save: jest.fn(),
     findAndCount: jest.fn(),
     find: jest.fn(),
+    count: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
   };
@@ -21,6 +22,7 @@ describe('SurveyGroupService', () => {
   };
 
   beforeEach(async () => {
+    jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SurveyGroupService,
@@ -44,7 +46,7 @@ describe('SurveyGroupService', () => {
 
   describe('create', () => {
     it('should create a survey group', async () => {
-      const createParams = { name: 'Test Group', ownerId: '123' };
+      const createParams = { name: 'Test Group', ownerId: '123', parentId: null };
       const mockSavedGroup = { ...createParams, id: '1' };
 
       mockSurveyGroupRepository.create.mockReturnValue(mockSavedGroup);
@@ -62,7 +64,7 @@ describe('SurveyGroupService', () => {
 
   describe('findAll', () => {
     it('should return survey groups', async () => {
-      const list = [{ id: '1', name: 'Test Group', ownerId: '123' }];
+      const list = [{ id: '1', name: 'Test Group', ownerId: '123', parentId: null }];
       const total = list.length;
 
       mockSurveyGroupRepository.findAndCount.mockResolvedValue([list, total]);
@@ -72,6 +74,76 @@ describe('SurveyGroupService', () => {
       expect(result).toEqual({ total, list, allList: list });
       expect(mockSurveyGroupRepository.findAndCount).toHaveBeenCalled();
       expect(mockSurveyGroupRepository.find).toHaveBeenCalled();
+    });
+  });
+
+  describe('getGroupAndDescendantIds', () => {
+    it('should collect current group and all descendants', async () => {
+      const rootId = 'root-id';
+      const childId = 'child-id';
+      const grandChildId = 'grandchild-id';
+
+      mockSurveyGroupRepository.find.mockResolvedValue([
+        {
+          _id: { toString: () => rootId },
+          name: 'root',
+          parentId: null,
+        },
+        {
+          _id: { toString: () => childId },
+          name: 'child',
+          parentId: rootId,
+        },
+        {
+          _id: { toString: () => grandChildId },
+          name: 'grandchild',
+          parentId: childId,
+        },
+      ]);
+
+      await expect(service.getGroupAndDescendantIds('123', rootId)).resolves.toEqual([
+        rootId,
+        childId,
+        grandChildId,
+      ]);
+    });
+  });
+
+  describe('hasChildren', () => {
+    it('should return true when group has children', async () => {
+      mockSurveyGroupRepository.count.mockResolvedValue(1);
+
+      await expect(service.hasChildren('123', 'group-1')).resolves.toBe(true);
+      expect(mockSurveyGroupRepository.count).toHaveBeenCalledWith({
+        where: {
+          ownerId: '123',
+          parentId: 'group-1',
+        },
+      });
+    });
+  });
+
+  describe('isDescendantGroup', () => {
+    it('should return true when target parent is current descendant', async () => {
+      const rootId = 'root-id';
+      const childId = 'child-id';
+
+      mockSurveyGroupRepository.find.mockResolvedValue([
+        {
+          _id: { toString: () => rootId },
+          name: 'root',
+          parentId: null,
+        },
+        {
+          _id: { toString: () => childId },
+          name: 'child',
+          parentId: rootId,
+        },
+      ]);
+
+      await expect(
+        service.isDescendantGroup('123', rootId, childId),
+      ).resolves.toBe(true);
     });
   });
 

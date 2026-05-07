@@ -5,12 +5,14 @@ import { ConfigModule } from '@nestjs/config';
 import { WorkspaceService } from './services/workspace.service';
 import { WorkspaceMemberService } from './services/workspaceMember.service';
 import { SurveyMetaService } from '../survey/services/surveyMeta.service';
+import { SurveyGroupService } from '../survey/services/surveyGroup.service';
 
 import { WorkspaceController } from './controllers/workspace.controller';
 
 import { Workspace } from 'src/models/workspace.entity';
 import { WorkspaceMember } from 'src/models/workspaceMember.entity';
 import { SurveyMeta } from 'src/models/surveyMeta.entity';
+import { SurveyGroup } from 'src/models/surveyGroup.entity';
 
 import { AuthModule } from '../auth/auth.module';
 
@@ -20,7 +22,7 @@ import { PluginManagerProvider } from 'src/securityPlugin/pluginManager.provider
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Workspace, WorkspaceMember, SurveyMeta]),
+    TypeOrmModule.forFeature([Workspace, WorkspaceMember, SurveyMeta, SurveyGroup]),
     ConfigModule,
     AuthModule,
   ],
@@ -31,8 +33,9 @@ import { PluginManagerProvider } from 'src/securityPlugin/pluginManager.provider
     LoggerProvider,
     WorkspaceGuard,
     SurveyMetaService,
+    SurveyGroupService,
     PluginManagerProvider,
   ],
-  exports: [WorkspaceMemberService, WorkspaceService, TypeOrmModule.forFeature([Workspace, WorkspaceMember, SurveyMeta])],
+  exports: [WorkspaceMemberService, WorkspaceService, TypeOrmModule.forFeature([Workspace, WorkspaceMember, SurveyMeta, SurveyGroup])],
 })
 export class WorkspaceModule {}

@@ -9,12 +9,14 @@ export interface MenuItem {
   icon?: string
   total?: Number
   count?: Number
+  parentId?: string | null
   children?: MenuItem[]
 }
 
 export type IGroup = {
   _id?: string
   name: string
+  parentId?: string | null
 }
 
 export type IWorkspace = {
@@ -61,6 +63,8 @@ export interface ICollaborator {
 export type GroupItem = {
   _id: string
   name: string
+  parentId?: string | null
+  parentName?: string
   createdAt: string
   updatedAt?: string
   ownerId: string

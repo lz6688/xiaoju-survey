@@ -293,6 +293,18 @@ const getRecycleBinCount = async (params?: any) => {
   await workSpaceStore.getRecycleBinCount(params)
 }
 
+const findMenuOwner = (id: string) => {
+  const walk = (menu: any): boolean => {
+    if (menu.id?.toString() === id) {
+      return true
+    }
+
+    return Array.isArray(menu.children) ? menu.children.some((child: any) => walk(child)) : false
+  }
+
+  return spaceMenus.value.find((menu: any) => Array.isArray(menu.children) && menu.children.some((child: any) => walk(child)))
+}
+
 const handleSpaceSelect = async (id: string) => {
   if (activeValue.value === id) {
     return void 0
@@ -336,14 +348,14 @@ const handleSpaceSelect = async (id: string) => {
       break
     default: {
       // isRecycleBin.value = false
-      const parentMenu = spaceMenus.value.find((parent: any) =>
-        parent.children.find((children: any) => children.id.toString() === id)
-      )
+      const parentMenu = findMenuOwner(id)
       if (parentMenu != undefined) {
-        workSpaceStore.changeMenuType(parentMenu.id)
-        if (parentMenu.id === MenuType.PersonalGroup) {
+        const parentMenuId = parentMenu.id as MenuType
+
+        workSpaceStore.changeMenuType(parentMenuId)
+        if (parentMenuId === MenuType.PersonalGroup) {
           workSpaceStore.changeGroup(id)
-        } else if (parentMenu.id === MenuType.SpaceGroup) {
+        } else if (parentMenuId === MenuType.SpaceGroup) {
           workSpaceStore.changeWorkSpace(id)
         }
       }

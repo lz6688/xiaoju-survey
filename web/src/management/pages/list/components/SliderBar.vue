@@ -57,17 +57,13 @@
               <span>{{ menu.name }}</span>
             </div>
           </template>
-          <el-menu-item
+          <MenuTreeNode
             v-for="item in menu.children"
             :key="item.id"
-            :index="item.id.toString()"
-            :class="[activeValue == item.id ? 'check-item' : '']"
-          >
-            <div class="title-box">
-              <p class="title-text">{{ item.name }}</p>
-              <p class="title-total">{{ item.total }}</p>
-            </div>
-          </el-menu-item>
+            :node="item"
+            :active-value="activeValue"
+            @select="handleMenu"
+          />
         </el-sub-menu>
       </div>
 
@@ -78,6 +74,7 @@
 import { ref } from 'vue'
 import { type MenuItem } from '@/management/utils/workSpace'
 import { MenuType } from '@/management/utils/workSpace'
+import MenuTreeNode from './MenuTreeNode.vue'
 const menuRef = ref()
 const props = withDefaults(
   defineProps<{

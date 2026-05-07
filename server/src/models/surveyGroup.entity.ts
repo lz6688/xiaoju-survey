@@ -8,4 +8,7 @@ export class SurveyGroup extends BaseEntity {
 
   @Column()
   name: string;
+
+  @Column({ nullable: true, default: null })
+  parentId: string | null;
 }

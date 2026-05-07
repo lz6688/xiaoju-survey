@@ -24,15 +24,92 @@ import {
   type SpaceItem,
   type IWorkspace,
   type IGroup,
-  type GroupItem
+  type GroupItem,
+  type MenuItem
 } from '@/management/utils/workSpace'
 
 import { useSurveyListStore } from './surveyList'
 
 // 工作空间存储
 export const useWorkSpaceStore = defineStore('workSpace', () => {
+  const buildGroupMenuTree = (list: GroupItem[]) => {
+    const nodeMap = new Map<string, MenuItem>()
+    const rootList: MenuItem[] = []
+
+    list.forEach((item) => {
+      nodeMap.set(item._id, {
+        id: item._id,
+        name: item.name,
+        total: item.surveyTotal,
+        parentId: item.parentId || null,
+        children: []
+      })
+    })
+
+    list.forEach((item) => {
+      const currentNode = nodeMap.get(item._id)
+
+      if (!currentNode) {
+        return
+      }
+
+      if (item.parentId && nodeMap.has(item.parentId)) {
+        nodeMap.get(item.parentId)?.children?.push(currentNode)
+      } else {
+        rootList.push(currentNode)
+      }
+    })
+
+    return rootList
+  }
+
+  const buildGroupOptionList = (list: GroupItem[]) => {
+    const childrenMap = new Map<string | null, GroupItem[]>()
+    const pathMap = new Map<string, string>()
+    const optionList: IGroup[] = []
+
+    list.forEach((item) => {
+      const parentId = item.parentId || null
+      const children = childrenMap.get(parentId) || []
+
+      children.push(item)
+      childrenMap.set(parentId, children)
+    })
+
+    const walk = (parentId: string | null, parentPath = '') => {
+      const currentList = childrenMap.get(parentId) || []
+
+      currentList.forEach((item) => {
+        const label = parentPath ? `${parentPath} / ${item.name}` : item.name
+
+        pathMap.set(item._id, label)
+        optionList.push({
+          _id: item._id,
+          name: label,
+          parentId: item.parentId || null
+        })
+        walk(item._id, label)
+      })
+    }
+
+    walk(null)
+
+    // 避免异常数据导致子分组完全丢失，在根路径之外补齐剩余节点。
+    list.forEach((item) => {
+      if (!pathMap.has(item._id)) {
+        optionList.push({
+          _id: item._id,
+          name: item.name,
+          parentId: item.parentId || null
+        })
+      }
+    })
+
+    return optionList
+  }
+
   // list空间
-  const spaceMenus = ref([
+  const spaceMenus = ref<MenuItem[]>([
     {
       icon: 'icon-wodekongjian',
       name: '我的空间',
@@ -171,11 +248,12 @@ export const useWorkSpaceStore = defineStore('workSpace', () => {
   // 分组
   const groupList = ref<GroupItem[]>([])
   const groupAllList = ref<IGroup[]>([])
+  const groupRawList = ref<GroupItem[]>([])
   const groupListTotal = ref(0)
   const groupDetail = ref<GroupItem | null>(null)
   async function addGroup(params: IGroup) {
-    const { name } = params
-    const res: any = await createGroup({ name })
+    const { name, parentId } = params
+    const res: any = await createGroup({ name, parentId })
 
     if (res.code === CODE_MAP.SUCCESS) {
       ElMessage.success('添加成功')
@@ -185,8 +263,8 @@ export const useWorkSpaceStore = defineStore('workSpace', () => {
   }
 
   async function updateGroup(params: Required<IGroup>) {
-    const { _id, name } = params
-    const res: any = await updateGroupReq({ _id, name })
+    const { _id, name, parentId } = params
+    const res: any = await updateGroupReq({ _id, name, parentId })
 
     if (res?.code === CODE_MAP.SUCCESS) {
       ElMessage.success('更新成功')
@@ -200,14 +278,9 @@ export const useWorkSpaceStore = defineStore('workSpace', () => {
       const res: any = await getGroupListReq(params)
       if (res.code === CODE_MAP.SUCCESS) {
         const { list, allList, total, unclassifiedSurveyTotal, allSurveyTotal } = res.data
-        const group = list.map((item: GroupItem) => {
-          return {
-            id: item._id,
-            name: item.name,
-            total: item.surveyTotal
-          }
-        })
-        group.unshift(
+        const groupTree = buildGroupMenuTree(allList)
+
+        spaceMenus.value[0].children = [
           {
             id: GroupState.All,
             name: '全部',
@@ -217,12 +290,13 @@ export const useWorkSpaceStore = defineStore('workSpace', () => {
             id: GroupState.Not,
             name: '未分组',
             total: unclassifiedSurveyTotal
-          }
-        )
+          },
+          ...groupTree
+        ]
         groupList.value = list
+        groupRawList.value = allList
         groupListTotal.value = total
-        spaceMenus.value[0].children = group
-        groupAllList.value = allList
+        groupAllList.value = buildGroupOptionList(allList)
       } else {
         ElMessage.error('getGroupList' + res.errmsg)
       }
@@ -231,9 +305,36 @@ export const useWorkSpaceStore = defineStore('workSpace', () => {
     }
   }
 
+  function getGroupDescendantIds(id: string) {
+    const childrenMap = new Map<string, string[]>()
+    const descendants = new Set<string>()
+
+    groupRawList.value.forEach((item) => {
+      const parentId = item.parentId || ''
+      const children = childrenMap.get(parentId) || []
+
+      children.push(item._id)
+      childrenMap.set(parentId, children)
+    })
+
+    const stack = [id]
+    while (stack.length) {
+      const currentId = stack.pop()
+
+      if (!currentId || descendants.has(currentId)) {
+        continue
+      }
+
+      descendants.add(currentId)
+      stack.push(...(childrenMap.get(currentId) || []))
+    }
+
+    return Array.from(descendants)
+  }
+
   function getGroupDetail(id: string) {
     try {
-      const data = groupList.value.find((item: GroupItem) => item._id === id)
+      const data = groupRawList.value.find((item: GroupItem) => item._id === id)
       if (data != undefined) {
         groupDetail.value = data
       } else {
@@ -298,11 +399,13 @@ export const useWorkSpaceStore = defineStore('workSpace', () => {
     setSpaceDetail,
     groupList,
     groupAllList,
+    groupRawList,
     groupListTotal,
     groupDetail,
     addGroup,
     updateGroup,
     getGroupList,
+    getGroupDescendantIds,
     getGroupDetail,
     setGroupDetail,
     deleteGroup,

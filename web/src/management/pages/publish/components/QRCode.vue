@@ -19,7 +19,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, nextTick } from 'vue'
+import { ref, watch } from 'vue'
 
 import QRCode from 'qrcode'
 
@@ -30,25 +30,27 @@ interface Props {
 const props = defineProps<Props>()
 
 const qRCodeImg = ref<string>('')
-const watchURL = computed<string>(() => props.url)
 
 const convertUrlToQRCode = async (url: string) => {
   try {
     const res = await QRCode.toDataURL(url)
-    qRCodeImg.value = res
+    if (props.url === url) {
+      qRCodeImg.value = res
+    }
   } catch (err) {
     console.log(err)
   }
 }
 
 watch(
-  watchURL,
+  () => props.url,
   (value) => {
-    if ((!qRCodeImg.value && value) || watchURL.value !== value) {
-      nextTick(() => {
-        convertUrlToQRCode(value)
-      })
+    if (!value) {
+      qRCodeImg.value = ''
+      return
     }
+
+    convertUrlToQRCode(value)
   },
   {
     immediate: true

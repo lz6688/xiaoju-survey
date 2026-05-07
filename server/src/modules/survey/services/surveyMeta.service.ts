@@ -9,6 +9,7 @@ import { EXCEPTION_CODE } from 'src/enums/exceptionCode';
 import { PluginManager } from 'src/securityPlugin/pluginManager';
 import { GROUP_STATE } from 'src/enums/surveyGroup';
 import { USER_ROLE } from 'src/enums/user';
+import { SurveyGroupService } from './surveyGroup.service';
 
 @Injectable()
 export class SurveyMetaService {
@@ -16,6 +17,7 @@ export class SurveyMetaService {
     @InjectRepository(SurveyMeta)
     private readonly surveyRepository: MongoRepository<SurveyMeta>,
     private readonly pluginManager: PluginManager,
+    private readonly surveyGroupService: SurveyGroupService,
   ) {}
 
   async getNewSurveyPath(): Promise<string> {
@@ -305,7 +307,15 @@ export class SurveyMetaService {
               ],
             );
           } else {
-            otherQuery.groupId = groupId;
+            const groupIdList =
+              await this.surveyGroupService.getGroupAndDescendantIds(
+                userId,
+                groupId,
+              );
+
+            otherQuery.groupId = {
+              $in: groupIdList,
+            };
           }
         }
         if (role !== USER_ROLE.ADMIN) {
@@ -453,8 +463,25 @@ export class SurveyMetaService {
       },
     ];
     if (groupId) {
-      if (groupId !== 'all') {
-        otherQuery.groupId = groupId;
+      if (groupId === GROUP_STATE.UNCLASSIFIED) {
+        otherQuery.$or = [
+          {
+            groupId: null,
+          },
+          {
+            groupId: {
+              $exists: false,
+            },
+          },
+        ];
+      } else if (groupId !== GROUP_STATE.ALL) {
+        const groupIdList = await this.surveyGroupService.getGroupAndDescendantIds(
+          userId,
+          groupId,
+        );
+        otherQuery.groupId = {
+          $in: groupIdList,
+        };
       }
     } else {
       otherQuery.$or = [

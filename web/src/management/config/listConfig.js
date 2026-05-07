@@ -40,6 +40,11 @@ export const groupListConfig = {
     key: 'name',
     width: 200
   },
+  parentName: {
+    title: '上级分组',
+    key: 'parentName',
+    width: 220
+  },
   surveyTotal: {
     title: '问卷数',
     key: 'surveyTotal',

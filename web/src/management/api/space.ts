@@ -111,12 +111,12 @@ export const getCollaboratorPermissions = (surveyId: string) => {
   })
 }
 
-export const createGroup = ({ name }: any) => {
-  return axios.post('surveyGroup', { name })
+export const createGroup = ({ name, parentId }: any) => {
+  return axios.post('surveyGroup', { name, parentId })
 }
 
-export const updateGroup = ({ _id, name }: any) => {
-  return axios.post(`/surveyGroup/update`, { name, groupId: _id })
+export const updateGroup = ({ _id, name, parentId }: any) => {
+  return axios.post(`/surveyGroup/update`, { name, parentId, groupId: _id })
 }
 
 export const getGroupList = (params: any) => {

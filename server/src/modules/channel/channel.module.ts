@@ -19,9 +19,11 @@ import { PluginManagerProvider } from 'src/securityPlugin/pluginManager.provider
 import { WorkspaceMemberService } from 'src/modules/workspace/services/workspaceMember.service';
 import { CollaboratorService } from 'src/modules/survey/services/collaborator.service';
 import { SurveyMetaService } from 'src/modules/survey/services/surveyMeta.service';
+import { SurveyGroupService } from 'src/modules/survey/services/surveyGroup.service';
 import { SurveyConfService } from 'src/modules/survey/services/surveyConf.service';
 import { SurveyMeta } from 'src/models/surveyMeta.entity';
 import { SurveyConf } from 'src/models/surveyConf.entity';
+import { SurveyGroup } from 'src/models/surveyGroup.entity';
 import { Collaborator } from 'src/models/collaborator.entity';
 import { AppManagerService } from 'src/modules/appManager/services/appManager.service';
 import { WorkspaceMember } from 'src/models/workspaceMember.entity';
@@ -36,6 +38,7 @@ import { WorkspaceModule } from 'src/modules/workspace/workspace.module';
       SurveyResponse,
       SurveyMeta,
       SurveyConf,
+      SurveyGroup,
       Collaborator,
       WorkspaceMember,
     ]),
@@ -54,6 +57,7 @@ import { WorkspaceModule } from 'src/modules/workspace/workspace.module';
     WorkspaceMemberService,
     CollaboratorService,
     SurveyMetaService,
+    SurveyGroupService,
     SurveyConfService,
     SurveyModule,
     AppManagerService,

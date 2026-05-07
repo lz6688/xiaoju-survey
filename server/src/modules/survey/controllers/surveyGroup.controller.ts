@@ -48,9 +48,20 @@ export class SurveyGroupController {
       throw new HttpException('参数错误', EXCEPTION_CODE.PARAMETER_ERROR);
     }
     const userId = req.user._id.toString();
+    const parentId = value.parentId || null;
+
+    if (parentId) {
+      const parentGroup = await this.surveyGroupService.findOne(parentId);
+
+      if (!parentGroup || parentGroup.ownerId !== userId) {
+        throw new HttpException('父分组不存在', EXCEPTION_CODE.PARAMETER_ERROR);
+      }
+    }
+
     const ret = await this.surveyGroupService.create({
       name: value.name,
       ownerId: userId,
+      parentId,
     });
     return {
       code: 200,
@@ -81,7 +92,7 @@ export class SurveyGroupController {
       skip,
       pageSize,
     );
-    const groupIdList = list.map((item) => item._id.toString());
+    const groupIdList = allList.map((item) => item._id.toString());
     const surveyTotalList = await Promise.all(
       groupIdList.map((item) => {
         return this.surveyMetaService.countSurveyMetaByGroupId({
@@ -93,6 +104,10 @@ export class SurveyGroupController {
     const surveyTotalMap = groupIdList.reduce((pre, cur, index) => {
       const total = surveyTotalList[index];
       pre[cur] = total;
+      return pre;
+    }, {});
+    const groupNameMap = allList.reduce((pre, cur) => {
+      pre[cur._id.toString()] = cur.name;
       return pre;
     }, {});
     const unclassifiedSurveyTotal =
@@ -119,9 +134,17 @@ export class SurveyGroupController {
             ...item,
             createdAt: moment(item.createdAt).format('YYYY-MM-DD HH:mm:ss'),
             surveyTotal: surveyTotalMap[id] || 0,
+            parentName: item.parentId ? groupNameMap[item.parentId] || '' : '',
           };
         }),
-        allList,
+        allList: allList.map((item) => {
+          const id = item._id.toString();
+          return {
+            ...item,
+            surveyTotal: surveyTotalMap[id] || 0,
+            parentName: item.parentId ? groupNameMap[item.parentId] || '' : '',
+          };
+        }),
         unclassifiedSurveyTotal,
         allSurveyTotal,
       },
@@ -145,8 +168,33 @@ export class SurveyGroupController {
     if (group?.ownerId !== req.user._id.toString()) {
       throw new HttpException('没有权限', EXCEPTION_CODE.NO_PERMISSION);
     }
+
+    const parentId = value.parentId || null;
+
+    if (parentId) {
+      const parentGroup = await this.surveyGroupService.findOne(parentId);
+
+      if (!parentGroup || parentGroup.ownerId !== req.user._id.toString()) {
+        throw new HttpException('父分组不存在', EXCEPTION_CODE.PARAMETER_ERROR);
+      }
+
+      const isDescendant = await this.surveyGroupService.isDescendantGroup(
+        req.user._id.toString(),
+        value.groupId,
+        parentId,
+      );
+
+      if (isDescendant) {
+        throw new HttpException(
+          '父分组不能选择当前分组或其子分组',
+          EXCEPTION_CODE.PARAMETER_ERROR,
+        );
+      }
+    }
+
     const ret = await this.surveyGroupService.update(value.groupId, {
       name: value.name,
+      parentId,
     });
     return {
       code: 200,
@@ -169,6 +217,18 @@ export class SurveyGroupController {
     if (group?.ownerId !== req.user._id.toString()) {
       throw new HttpException('没有权限', EXCEPTION_CODE.NO_PERMISSION);
     }
+    const hasChildren = await this.surveyGroupService.hasChildren(
+      req.user._id.toString(),
+      groupId,
+    );
+
+    if (hasChildren) {
+      throw new HttpException(
+        '请先删除或调整该分组下的子分组',
+        EXCEPTION_CODE.PARAMETER_ERROR,
+      );
+    }
+
     await this.surveyGroupService.remove(groupId);
     return {
       code: 200,

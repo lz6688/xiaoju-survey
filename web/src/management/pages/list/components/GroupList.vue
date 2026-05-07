@@ -109,7 +109,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['refresh'])
-const fields = ['name', 'surveyTotal', 'createdAt']
+const fields = ['name', 'parentName', 'surveyTotal', 'createdAt']
 const fieldList = computed(() => {
   return map(fields, (f) => {
     return get(groupListConfig, f, null)
@@ -131,7 +131,10 @@ const tools = ref([
 ])
 
 const data = computed(() => {
-  return props.data
+  return props.data.map((item: any) => ({
+    ...item,
+    parentName: item.parentName || '一级分组'
+  }))
 })
 let searchVal = ref('')
 let curPage = ref(1)

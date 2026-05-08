@@ -48,13 +48,19 @@
         <el-sub-menu
           v-else
           :index="menu.id.toString()"
-          :class="[activeValue == menu.id ? 'check-item' : '']"
-          default-opened
+          :class="[
+            activeValue == menu.id ? 'check-item' : '',
+            'main-submenu',
+            'el-sub-menu__hide-arrow'
+          ]"
         >
           <template #title>
-            <div class="title-content sub-title main-item" @click.stop="handleMenu(menu.id)">
-              <i :class="['iconfont', menu.icon]"></i>
-              <span>{{ menu.name }}</span>
+            <div class="submenu-title-wrap" @click="handleMenu(menu.id)">
+              <div class="title-content sub-title">
+                <i :class="['iconfont', menu.icon]"></i>
+                <span>{{ menu.name }}</span>
+              </div>
+              <span class="submenu-arrow" aria-hidden="true"></span>
             </div>
           </template>
           <MenuTreeNode
@@ -89,7 +95,6 @@ const props = withDefaults(
 
 const emit = defineEmits(['select'])
 const handleMenu = (id: string) => {
-  console.log(`handleMenu ${id}`)
   emit('select', id)
 }
 </script>
@@ -106,9 +111,20 @@ const handleMenu = (id: string) => {
     }
   }
 }
+
+.main-submenu {
+  :deep(.el-sub-menu__title) {
+    height: 48px;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    padding-right: 20px;
+  }
+}
+
 .el-menu-vertical {
   border: none;
-  width: 200px;
+  width: 220px;
   min-height: 400px;
   height: 100%;
   position: absolute;
@@ -125,8 +141,9 @@ const handleMenu = (id: string) => {
   }
 
   :deep(.el-menu-item) {
-    width: 200px;
+    width: 100%;
     height: 36px;
+    box-sizing: border-box;
     > p {
       overflow: hidden;
       /*文本不会换行*/
@@ -182,6 +199,10 @@ const handleMenu = (id: string) => {
       font-weight: 400;
     }
   }
+  :deep(.el-sub-menu__title) {
+    width: 100%;
+    box-sizing: border-box;
+  }
   :deep(.el-menu-item-group) {
     > ul {
       > li {
@@ -194,8 +215,8 @@ const handleMenu = (id: string) => {
     padding: 0 !important;
   }
   .sub-title {
-    width: 100%;
-    width: 100%;
+    flex: 1;
+    min-width: 0;
   }
 }
 .iconfont {
@@ -203,6 +224,54 @@ const handleMenu = (id: string) => {
   margin-right: 10px;
   color: #faa600 !important;
 }
+
+.title-box {
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.title-content {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+
+  span {
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.submenu-title-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.submenu-arrow {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  margin-left: 8px;
+  border-right: 1.5px solid #92949d;
+  border-bottom: 1.5px solid #92949d;
+  transform: rotate(-45deg);
+  transition: transform 0.2s ease;
+}
+
+.main-submenu.is-opened {
+  .submenu-arrow {
+    transform: rotate(45deg);
+  }
+}
+
 .check-item {
   background: #fef6e6 100% !important;
 }

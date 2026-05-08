@@ -32,35 +32,15 @@ import { useSurveyListStore } from './surveyList'
 
 // 工作空间存储
 export const useWorkSpaceStore = defineStore('workSpace', () => {
-  const buildGroupMenuTree = (list: GroupItem[]) => {
-    const nodeMap = new Map<string, MenuItem>()
-    const rootList: MenuItem[] = []
-
-    list.forEach((item) => {
-      nodeMap.set(item._id, {
+  const buildTopLevelGroupMenus = (list: GroupItem[]) => {
+    return list
+      .filter((item) => !item.parentId)
+      .map((item) => ({
         id: item._id,
         name: item.name,
         total: item.surveyTotal,
-        parentId: item.parentId || null,
-        children: []
-      })
-    })
-
-    list.forEach((item) => {
-      const currentNode = nodeMap.get(item._id)
-
-      if (!currentNode) {
-        return
-      }
-
-      if (item.parentId && nodeMap.has(item.parentId)) {
-        nodeMap.get(item.parentId)?.children?.push(currentNode)
-      } else {
-        rootList.push(currentNode)
-      }
-    })
-
-    return rootList
+        parentId: null
+      }))
   }
 
   const buildGroupOptionList = (list: GroupItem[]) => {
@@ -278,7 +258,7 @@ export const useWorkSpaceStore = defineStore('workSpace', () => {
       const res: any = await getGroupListReq(params)
       if (res.code === CODE_MAP.SUCCESS) {
         const { list, allList, total, unclassifiedSurveyTotal, allSurveyTotal } = res.data
-        const groupTree = buildGroupMenuTree(allList)
+        const topLevelMenus = buildTopLevelGroupMenus(allList)
 
         spaceMenus.value[0].children = [
           {
@@ -291,7 +271,7 @@ export const useWorkSpaceStore = defineStore('workSpace', () => {
             name: '未分组',
             total: unclassifiedSurveyTotal
           },
-          ...groupTree
+          ...topLevelMenus
         ]
         groupList.value = list
         groupRawList.value = allList
@@ -330,6 +310,30 @@ export const useWorkSpaceStore = defineStore('workSpace', () => {
     }
 
     return Array.from(descendants)
+  }
+
+  function getGroupChildren(parentId: string | null) {
+    return groupRawList.value.filter((item) => (item.parentId || null) === parentId)
+  }
+
+  function getGroupPath(id: string) {
+    const nodeMap = new Map(groupRawList.value.map((item) => [item._id, item]))
+    const path: GroupItem[] = []
+    const visited = new Set<string>()
+    let current = nodeMap.get(id)
+
+    while (current && !visited.has(current._id)) {
+      path.unshift(current)
+      visited.add(current._id)
+      current = current.parentId ? nodeMap.get(current.parentId) : undefined
+    }
+
+    return path
+  }
+
+  function getTopLevelGroupId(id: string) {
+    const path = getGroupPath(id)
+    return path[0]?._id || id
   }
 
   function getGroupDetail(id: string) {
@@ -406,6 +410,9 @@ export const useWorkSpaceStore = defineStore('workSpace', () => {
     updateGroup,
     getGroupList,
     getGroupDescendantIds,
+    getGroupChildren,
+    getGroupPath,
+    getTopLevelGroupId,
     getGroupDetail,
     setGroupDetail,
     deleteGroup,

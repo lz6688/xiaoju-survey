@@ -4,7 +4,7 @@
     :index="node.id.toString()"
     default-opened
     class="tree-node"
-    :style="{ '--tree-node-padding': `${45 + level * 20}px` }"
+    :style="{ '--tree-node-padding': `${indentPadding}px` }"
     :class="[activeValue === node.id ? 'check-item' : '']"
   >
     <template #title>
@@ -25,7 +25,7 @@
   <el-menu-item
     v-else
     :index="node.id.toString()"
-    :style="{ paddingLeft: `${45 + level * 20}px` }"
+    :style="{ paddingLeft: `${indentPadding}px` }"
     :class="[activeValue === node.id ? 'check-item' : '']"
   >
     <div class="title-box">
@@ -38,7 +38,11 @@
 <script setup lang="ts">
 import { type MenuItem } from '@/management/utils/workSpace'
 
-withDefaults(
+const emit = defineEmits<{
+  select: [id: string]
+}>()
+
+const props = withDefaults(
   defineProps<{
     node: MenuItem
     activeValue: string
@@ -49,9 +53,7 @@ withDefaults(
   }
 )
 
-const emit = defineEmits<{
-  select: [id: string]
-}>()
+const indentPadding = Math.min(45 + props.level * 16, 109)
 
 const emitSelect = (id: string) => {
   emit('select', id)
@@ -61,9 +63,11 @@ const emitSelect = (id: string) => {
 <style lang="scss" scoped>
 .title-box {
   width: 100%;
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 8px;
 }
 
 .tree-node {
@@ -81,6 +85,8 @@ const emitSelect = (id: string) => {
 }
 
 .title-total {
+  flex-shrink: 0;
+  min-width: 24px;
   font-size: 14px;
   color: #92949d;
   text-align: right;

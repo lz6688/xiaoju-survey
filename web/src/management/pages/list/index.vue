@@ -11,9 +11,46 @@
       <div :class="['list-content', { 'list-content--agent': !isAdmin }]">
         <AgentManagePanel v-if="showAgentManagePanel" />
         <div class="top" v-else>
-          <h2>
-            {{ tableTitle }}
-          </h2>
+          <div class="title-wrap">
+            <div class="title-main">
+              <h2>
+                {{ tableTitle }}
+              </h2>
+              <div v-if="showGroupNavigator" class="group-breadcrumb">
+                <span class="group-breadcrumb__item" @click="goToGroupRoot">我的空间</span>
+                <span class="group-breadcrumb__separator">/</span>
+                <template v-for="(item, index) in groupPath" :key="item._id">
+                  <span
+                    :class="[
+                      'group-breadcrumb__item',
+                      { 'is-current': index === groupPath.length - 1 }
+                    ]"
+                    @click="goToGroup(item._id)"
+                  >
+                    {{ item.name }}
+                  </span>
+                  <span
+                    v-if="index < groupPath.length - 1"
+                    class="group-breadcrumb__separator"
+                  >
+                    /
+                  </span>
+                </template>
+              </div>
+            </div>
+            <div v-if="showGroupNavigator && childGroups.length" class="group-children-bar">
+              <button
+                v-for="item in childGroups"
+                :key="item._id"
+                type="button"
+                class="group-children-chip"
+                @click="goToGroup(item._id)"
+              >
+                <span class="group-children-chip__name">{{ item.name }}</span>
+                <span class="group-children-chip__count">{{ item.surveyTotal }}</span>
+              </button>
+            </div>
+          </div>
           <div class="operation" v-if="isAdmin">
             <el-button
               class="btn create-btn"
@@ -195,7 +232,7 @@ import AIGenerate from './components/AIGenerate.vue'
 
 import TopNav from '@/management/components/TopNav.vue'
 import CreateForm from '@/management/components/CreateForm.vue';
-import { MenuType } from '@/management/utils/workSpace'
+import { GroupState, MenuType } from '@/management/utils/workSpace'
 import AgentManagePanel from '@/management/pages/agent/components/AgentManagePanel.vue'
 
 import { useWorkSpaceStore } from '@/management/stores/workSpace'
@@ -223,6 +260,28 @@ const router = useRouter()
 const route = useRoute()
 const isAdmin = computed(() => userStore.userInfo?.role === 'admin')
 const showAgentManagePanel = computed(() => isAdmin.value && menuType.value === MenuType.AgentManage)
+const showGroupNavigator = computed(() => {
+  return (
+    isAdmin.value &&
+    menuType.value === MenuType.PersonalGroup &&
+    !!groupId.value &&
+    ![ GroupState.All, GroupState.Not ].includes(groupId.value as GroupState)
+  )
+})
+const groupPath = computed(() => {
+  if (!showGroupNavigator.value || !groupId.value) {
+    return []
+  }
+
+  return workSpaceStore.getGroupPath(groupId.value)
+})
+const childGroups = computed(() => {
+  if (!showGroupNavigator.value || !groupId.value) {
+    return []
+  }
+
+  return workSpaceStore.getGroupChildren(groupId.value)
+})
 
 const tableTitle = computed(() => {
   if (!isAdmin.value) {
@@ -233,6 +292,12 @@ const tableTitle = computed(() => {
   }
   if (menuType.value === MenuType.PersonalGroup && !groupId.value) {
     return '我的空间'
+  } else if (menuType.value === MenuType.PersonalGroup && groupId.value === GroupState.All) {
+    return '全部问卷'
+  } else if (menuType.value === MenuType.PersonalGroup && groupId.value === GroupState.Not) {
+    return '未分组'
+  } else if (menuType.value === MenuType.PersonalGroup && showGroupNavigator.value) {
+    return groupPath.value[groupPath.value.length - 1]?.name || '我的空间'
   } else if (menuType.value === MenuType.SpaceGroup && !workSpaceId.value) {
     return '团队空间'
   } else if (menuType.value === MenuType.RecycleBin) {
@@ -293,6 +358,44 @@ const getRecycleBinCount = async (params?: any) => {
   await workSpaceStore.getRecycleBinCount(params)
 }
 
+const syncActiveGroupMenu = (selectedGroupId: string) => {
+  if ([ GroupState.All, GroupState.Not ].includes(selectedGroupId as GroupState)) {
+    activeValue.value = selectedGroupId
+    return
+  }
+
+  activeValue.value = workSpaceStore.getTopLevelGroupId(selectedGroupId)
+}
+
+const selectPersonalGroup = async (selectedGroupId: string) => {
+  workSpaceStore.changeMenuType(MenuType.PersonalGroup)
+  workSpaceStore.changeGroup(selectedGroupId)
+  syncActiveGroupMenu(selectedGroupId)
+
+  if (route.name === 'agents') {
+    router.push({ name: 'survey' })
+  }
+
+  listRef?.value?.resetCurrentPage()
+  await fetchSurveyList()
+}
+
+const goToGroup = async (selectedGroupId: string) => {
+  if (groupId.value === selectedGroupId) {
+    return
+  }
+
+  await selectPersonalGroup(selectedGroupId)
+}
+
+const goToGroupRoot = async () => {
+  activeValue.value = MenuType.PersonalGroup
+  workSpaceStore.changeMenuType(MenuType.PersonalGroup)
+  workSpaceStore.changeWorkSpace('')
+  workSpaceStore.changeGroup('')
+  await fetchGroupList()
+}
+
 const findMenuOwner = (id: string) => {
   const walk = (menu: any): boolean => {
     if (menu.id?.toString() === id) {
@@ -322,6 +425,7 @@ const handleSpaceSelect = async (id: string) => {
     case MenuType.PersonalGroup:
       workSpaceStore.changeMenuType(MenuType.PersonalGroup)
       workSpaceStore.changeWorkSpace('')
+      workSpaceStore.changeGroup('')
       if (route.name === 'agents') {
         router.push({ name: 'survey' })
       }
@@ -354,7 +458,8 @@ const handleSpaceSelect = async (id: string) => {
 
         workSpaceStore.changeMenuType(parentMenuId)
         if (parentMenuId === MenuType.PersonalGroup) {
-          workSpaceStore.changeGroup(id)
+          await selectPersonalGroup(id)
+          return
         } else if (parentMenuId === MenuType.SpaceGroup) {
           workSpaceStore.changeWorkSpace(id)
         }
@@ -624,7 +729,7 @@ const onAIGenerteChange = (newQuestionList: Array<any>) => {
     position: relative;
     height: 100%;
     width: 100%;
-    padding: 32px 32px 32px 232px;
+    padding: 32px 32px 32px 252px;
     -webkit-box-sizing: border-box;
     box-sizing: border-box;
     overflow: scroll;
@@ -632,15 +737,26 @@ const onAIGenerteChange = (newQuestionList: Array<any>) => {
     .top {
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-start;
       margin-bottom: 24px;
+      gap: 24px;
       .operation {
         flex: 0 1 auto;
         display: flex;
       }
 
+      .title-wrap {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .title-main {
+        min-width: 0;
+      }
+
       h2 {
         font-size: 18px;
+        margin-bottom: 8px;
       }
 
       .create-btn {
@@ -664,6 +780,69 @@ const onAIGenerteChange = (newQuestionList: Array<any>) => {
         span {
           font-size: 14px;
         }
+      }
+
+      .group-breadcrumb {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px;
+        color: #7c8090;
+        font-size: 13px;
+      }
+
+      .group-breadcrumb__item {
+        cursor: pointer;
+        white-space: nowrap;
+
+        &.is-current {
+          color: #292a36;
+          cursor: default;
+          font-weight: 500;
+        }
+      }
+
+      .group-breadcrumb__separator {
+        color: #b3b6c2;
+      }
+
+      .group-children-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .group-children-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        max-width: 220px;
+        padding: 8px 12px;
+        border: 1px solid #e3e7ee;
+        border-radius: 8px;
+        background: #fff;
+        color: #4a4c5b;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover {
+          border-color: #d1d8e6;
+          background: #f8fafc;
+        }
+      }
+
+      .group-children-chip__name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .group-children-chip__count {
+        flex-shrink: 0;
+        color: #92949d;
+        font-size: 12px;
       }
     }
   }

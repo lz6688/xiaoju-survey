@@ -19,7 +19,13 @@
         <el-input v-model="formModel.name" />
       </el-form-item>
       <el-form-item label="上级分组">
-        <el-select v-model="formModel.parentId" placeholder="设为一级分组" clearable>
+        <el-select
+          v-model="formModel.parentId"
+          placeholder="设为一级分组"
+          clearable
+          filterable
+          default-first-option
+        >
           <el-option
             v-for="item in parentOptions"
             :key="item._id"
